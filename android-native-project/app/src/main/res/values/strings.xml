@@ -13,4 +13,6 @@
     <string name="sample_poetry_urdu">ستاروں سے آگے جہاں اور بھی ہیں&#10;ابھی عشق کے امتحاں اور بھی ہیں</string>
     <string name="sample_poetry_hindi">सितारों से आगे जहाँ और भी हैं&#10;अभी इश्क़ के इम्तिहाँ और भी हैं</string>
     <string name="sample_poetry_en">Beyond the stars are other worlds,&#10;And many more trials in love await.</string>
+    <string name="label_offline">آف لائن موڈ (Offline Mode)</string>
+    <string name="btn_retry">دوبارہ کوشش کریں (Retry)</string>
 </resources>

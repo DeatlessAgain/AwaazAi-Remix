@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest.json",
+  "name": "Awaaz AI - Realistic Voice & Video Studio",
+  "short_name": "Awaaz AI",
+  "description": "Generate ultra-realistic human voices for Urdu, English, and Hindi text with instant high-quality audio downloads, voice direction, poetry tarannum, subtitles, and AI video studio.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "window-controls-overlay",
+    "minimal-ui",
+    "browser"
+  ],
+  "background_color": "#050507",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "lang": "en-US",
+  "dir": "auto",
+  "prefer_related_applications": false,
+  "categories": [
+    "productivity",
+    "entertainment",
+    "multimedia",
+    "utilities",
+    "music",
+    "video"
+  ],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Voice Generator",
+      "short_name": "Voices",
+      "description": "Generate realistic human speech in Urdu, Hindi & English",
+      "url": "/?tab=single",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "AI Voice Director",
+      "short_name": "Director",
+      "description": "Direct emotions, pacing, and tone with natural prompts",
+      "url": "/?tab=voice_director",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "AI Video Studio",
+      "short_name": "Video",
+      "description": "Create cinematic text, image and audio reactive videos",
+      "url": "/?tab=video_creator",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "AI Document Narrator",
+      "short_name": "Narrator",
+      "description": "Convert PDFs, text files and books into voice podcasts",
+      "url": "/?tab=document_narrator",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}

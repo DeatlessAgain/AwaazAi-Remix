@@ -343,10 +343,23 @@ def main():
         with zipfile.ZipFile(apk_src, 'r') as zin:
             zin.extractall(tmpdir)
         
-        # 2. Update assets/index.html with guaranteed non-blank mobile UI
-        offline_html = build_offline_html()
-        with open(os.path.join(tmpdir, "assets", "index.html"), "w", encoding="utf-8") as f:
-            f.write(offline_html)
+        # 2. Update assets with the real compiled AI Studio web app
+        dist_dir = "dist"
+        assets_dest = os.path.join(tmpdir, "assets")
+        os.makedirs(assets_dest, exist_ok=True)
+        if os.path.exists(dist_dir):
+            import shutil
+            for item in os.listdir(dist_dir):
+                s = os.path.join(dist_dir, item)
+                d = os.path.join(assets_dest, item)
+                if item.endswith('.apk') or item.endswith('.zip') or item.startswith('server.cjs'):
+                    continue
+                if os.path.isdir(s):
+                    if os.path.exists(d):
+                        shutil.rmtree(d)
+                    shutil.copytree(s, d)
+                else:
+                    shutil.copy2(s, d)
         
         # Remove old signature files
         meta_inf = os.path.join(tmpdir, "META-INF")
