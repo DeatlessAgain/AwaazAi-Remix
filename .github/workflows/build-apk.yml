@@ -37,14 +37,20 @@ jobs:
         run: |
           export PATH="$GITHUB_WORKSPACE/gradle-8.5/bin:$PATH"
           gradle -v
-          cd android-native-project
-          gradle assembleDebug --no-daemon --stacktrace
+          if [ -f "android-native-project/settings.gradle.kts" ]; then
+            cd android-native-project
+            gradle assembleDebug --no-daemon --stacktrace
+          else
+            gradle assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AwaazAI-Studio-Debug-APK
-          path: android-native-project/app/build/outputs/apk/debug/*.apk
+          path: |
+            **/build/outputs/apk/debug/*.apk
+            android-native-project/app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
       - name: Upload Release APK Artifact (if built)
