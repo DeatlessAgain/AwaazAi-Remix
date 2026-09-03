@@ -1,18 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Awaaz AI Studio</string>
-    <string name="app_subtitle">آواز اے آئی اسٹوڈیو • Native Android</string>
-    <string name="label_input_text">متن درج کریں (Enter Text or Poetry)</string>
-    <string name="label_select_voice">آواز منتخب کریں (Select Voice Artist)</string>
-    <string name="label_speed">رفتار (Speed)</string>
-    <string name="btn_generate_voice">آواز تیار کریں (Generate AI Voice)</string>
-    <string name="btn_play">سنیں (Play)</string>
-    <string name="btn_stop">روکیں (Stop)</string>
-    <string name="btn_save">فون میں محفوظ کریں (Save MP3)</string>
-    <string name="error_empty_text">برائے کرم کچھ متن یا شاعری لکھیں</string>
-    <string name="sample_poetry_urdu">ستاروں سے آگے جہاں اور بھی ہیں&#10;ابھی عشق کے امتحاں اور بھی ہیں</string>
-    <string name="sample_poetry_hindi">सितारों से आगे जहाँ और भी हैं&#10;अभी इश्क़ के इम्तिहाँ और भी हैं</string>
-    <string name="sample_poetry_en">Beyond the stars are other worlds,&#10;And many more trials in love await.</string>
-    <string name="label_offline">آف لائن موڈ (Offline Mode)</string>
-    <string name="btn_retry">دوبارہ کوشش کریں (Retry)</string>
+    <string name="app_subtitle">آواز اے آئی اسٹوڈیو • Native Mobile App</string>
+    <string name="status_connected">آن لائن کلاؤڈ متصل</string>
+    <string name="status_offline">آف لائن لوکل موڈ</string>
+
+    <!-- Navigation Titles -->
+    <string name="nav_title_tts">آواز ساز</string>
+    <string name="nav_title_poetry">شاعری و میٹر</string>
+    <string name="nav_title_library">محفوظ آڈیوز</string>
+    <string name="nav_title_settings">سیٹنگز</string>
+
+    <!-- TTS Screen -->
+    <string name="header_tts">آواز تخلیق کار (AI Voice Generator)</string>
+    <string name="label_input_text">اردو یا ہندی متن درج کریں</string>
+    <string name="hint_enter_text">یہاں کوئی بھی تحریر، غزل، نظم، یا کہانی لکھیں...</string>
+    <string name="label_select_voice">فنکار کی آواز (Voice Artist)</string>
+    <string name="label_select_style">انداز و تاثر (Style &amp; Emotion)</string>
+    <string name="label_speed">رفتار (Speed): %1$.1fx</string>
+    <string name="label_pitch">آواز کا سر (Pitch): %1$d</string>
+    <string name="btn_generate_voice">آواز تیار کریں (Generate Voice)</string>
+    <string name="generating_voice">آواز تیار ہو رہی ہے، انتظار فرمائیں...</string>
+    <string name="error_empty_text">برائے کرم کچھ متن یا شاعری درج کریں</string>
+
+    <!-- Audio Player -->
+    <string name="now_playing">چل رہا ہے: %1$s</string>
+    <string name="btn_play">سنیں</string>
+    <string name="btn_pause">روکیں</string>
+    <string name="btn_stop">بند کریں</string>
+    <string name="btn_save">فون میں محفوظ کریں</string>
+    <string name="btn_share">شیئر کریں</string>
+    <string name="saved_to_music">آڈیو فون کے Music/AwaazAI میں محفوظ ہو گئی</string>
+
+    <!-- Sample Presets -->
+    <string name="sample_iqbal_title">علامہ اقبال</string>
+    <string name="sample_iqbal_text">ستاروں سے آگے جہاں اور بھی ہیں&#10;ابھی عشق کے امتحاں اور بھی ہیں&#10;قناعت نہ کر عالمِ رنگ و بو پر&#10;چمن اور بھی آشیاں اور بھی ہیں</string>
+    <string name="sample_ghalib_title">مرزا غالب</string>
+    <string name="sample_ghalib_text">ہزاروں خواہشیں ایسی کہ ہر خواہش پہ دم نکلے&#10;بہت نکلے مرے ارمان لیکن پھر بھی کم نکلے&#10;نکلنا خلد سے آدم کا سنتے آئے تھے لیکن&#10;بہت بے آبرو ہو کر ترے کوچے سے ہم نکلے</string>
+    <string name="sample_faiz_title">فیض احمد فیض</string>
+    <string name="sample_faiz_text">مجھ سے پہلی سی محبت مرے محبوب نہ مانگ&#10;میں نے سمجھا تھا کہ تو ہے تو درخشاں ہے حیات&#10;تیرا غم ہے تو غمِ دہر کا جھگڑا کیا ہے</string>
+
+    <!-- Poetry Studio -->
+    <string name="header_poetry">شاعری و اوزان جانچ کار (Poetry Meter)</string>
+    <string name="hint_poetry_input">یہاں اپنا شعر یا مصرعہ درج کریں...</string>
+    <string name="btn_analyze_poetry">بحر و اوزان جانچیں (Analyze Meter)</string>
+    <string name="poetry_meter_result">تقطیع و اوزان کا نتیجہ</string>
+    <string name="btn_recite_poetry">شاعرانہ ترنم میں سنیں</string>
+
+    <!-- Saved Library -->
+    <string name="header_library">فون میں محفوظ آڈیوز (Audio Library)</string>
+    <string name="empty_library">ابھی تک کوئی آڈیو محفوظ نہیں ہوئی۔ نئی آواز تیار کر کے محفوظ کریں۔</string>
+
+    <!-- Settings -->
+    <string name="header_settings">سیٹنگز و رابطہ (Settings &amp; Sync)</string>
+    <string name="label_server_url">کلاؤڈ سرور ایڈریس (Backend API):</string>
+    <string name="label_offline_switch">صرف آف لائن انجن استعمال کریں (Offline Mode)</string>
+    <string name="desc_offline_switch">اگر انٹرنیٹ نہ ہو تو اینڈرائیڈ کا اندرونی TTS استعمال کریں</string>
+    <string name="btn_open_web_studio">ایڈوانسڈ ویڈیو و اسکرپٹ اسٹوڈیو کھولیں</string>
+    <string name="app_version_label">Awaaz AI Studio v2.0 Native</string>
+
+    <string name="label_offline">آف لائن موڈ</string>
+    <string name="btn_retry">دوبارہ کوشش کریں</string>
 </resources>

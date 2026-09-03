@@ -4,6 +4,8 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import java.io.File
@@ -15,10 +17,13 @@ class NativeAudioEngine(private val context: Context) : TextToSpeech.OnInitListe
     private var mediaPlayer: MediaPlayer? = null
     private var textToSpeech: TextToSpeech? = null
     private var isTtsReady = false
+    private val progressHandler = Handler(Looper.getMainLooper())
+    private var progressRunnable: Runnable? = null
 
     var onPlaybackStarted: (() -> Unit)? = null
     var onPlaybackCompleted: (() -> Unit)? = null
     var onError: ((String) -> Unit)? = null
+    var onProgressUpdate: ((currentMs: Int, totalMs: Int) -> Unit)? = null
 
     init {
         textToSpeech = TextToSpeech(context.applicationContext, this)
@@ -40,7 +45,7 @@ class NativeAudioEngine(private val context: Context) : TextToSpeech.OnInitListe
     fun playAudioBytes(audioBytes: ByteArray, speed: Float = 1.0f) {
         try {
             stop()
-            val tempFile = File.createTempFile("awaaz_temp_", ".mp3", context.cacheDir)
+            val tempFile = File.createTempFile("awaaz_temp_", ".wav", context.cacheDir)
             FileOutputStream(tempFile).use { it.write(audioBytes) }
 
             mediaPlayer = MediaPlayer().apply {
@@ -55,13 +60,16 @@ class NativeAudioEngine(private val context: Context) : TextToSpeech.OnInitListe
                         }
                     }
                     mp.start()
+                    startProgressTracking()
                     onPlaybackStarted?.invoke()
                 }
                 setOnCompletionListener {
+                    stopProgressTracking()
                     onPlaybackCompleted?.invoke()
                     tempFile.delete()
                 }
                 setOnErrorListener { _, what, extra ->
+                    stopProgressTracking()
                     onError?.invoke("Playback error: what=$what extra=$extra")
                     tempFile.delete()
                     true
@@ -74,12 +82,63 @@ class NativeAudioEngine(private val context: Context) : TextToSpeech.OnInitListe
         }
     }
 
+    private fun startProgressTracking() {
+        stopProgressTracking()
+        progressRunnable = object : Runnable {
+            override fun run() {
+                mediaPlayer?.let { mp ->
+                    try {
+                        if (mp.isPlaying) {
+                            onProgressUpdate?.invoke(mp.currentPosition, mp.duration)
+                            progressHandler.postDelayed(this, 200)
+                        }
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                }
+            }
+        }
+        progressRunnable?.let { progressHandler.post(it) }
+    }
+
+    private fun stopProgressTracking() {
+        progressRunnable?.let { progressHandler.removeCallbacks(it) }
+        progressRunnable = null
+    }
+
+    fun pause() {
+        try {
+            if (mediaPlayer?.isPlaying == true) {
+                mediaPlayer?.pause()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error pausing audio", e)
+        }
+    }
+
+    fun resume() {
+        try {
+            mediaPlayer?.start()
+            startProgressTracking()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resuming audio", e)
+        }
+    }
+
+    fun seekTo(positionMs: Int) {
+        try {
+            mediaPlayer?.seekTo(positionMs)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error seeking audio", e)
+        }
+    }
+
     /**
      * Fallback to native Android TTS when offline or no connection
      */
     fun speakOffline(text: String, languageCode: String = "ur", rate: Float = 1.0f) {
         if (!isTtsReady || textToSpeech == null) {
-            onError?.invoke("Offline speech engine is preparing, please wait...")
+            onError?.invoke("آف لائن انجن تیار ہو رہا ہے، برائے کرم انتظار کریں...")
             return
         }
 
@@ -103,6 +162,7 @@ class NativeAudioEngine(private val context: Context) : TextToSpeech.OnInitListe
 
     fun stop() {
         try {
+            stopProgressTracking()
             if (mediaPlayer?.isPlaying == true) {
                 mediaPlayer?.stop()
             }

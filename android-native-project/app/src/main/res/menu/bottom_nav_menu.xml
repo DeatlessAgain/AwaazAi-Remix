@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_tts"
+        android:icon="@drawable/ic_voice"
+        android:title="@string/nav_title_tts" />
+
+    <item
+        android:id="@+id/nav_poetry"
+        android:icon="@drawable/ic_feather"
+        android:title="@string/nav_title_poetry" />
+
+    <item
+        android:id="@+id/nav_library"
+        android:icon="@drawable/ic_library"
+        android:title="@string/nav_title_library" />
+
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/nav_title_settings" />
+</menu>
