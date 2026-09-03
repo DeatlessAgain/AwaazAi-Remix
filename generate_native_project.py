@@ -854,7 +854,8 @@ activity_main_xml = """<?xml version="1.0" encoding="utf-8"?>
 """
 
 # 11. res/values/strings.xml
-strings_xml = """<resources>
+strings_xml = """<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="app_name">Awaaz AI Studio</string>
     <string name="app_subtitle">آواز اے آئی اسٹوڈیو • Native Android</string>
     <string name="label_input_text">متن درج کریں (Enter Text or Poetry)</string>
@@ -872,7 +873,8 @@ strings_xml = """<resources>
 """
 
 # 12. res/values/colors.xml
-colors_xml = """<resources>
+colors_xml = """<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <color name="bg_dark">#050507</color>
     <color name="card_dark">#121218</color>
     <color name="border_color">#262633</color>
@@ -884,13 +886,21 @@ colors_xml = """<resources>
 """
 
 # 13. res/values/themes.xml
-themes_xml = """<resources>
-    <style name="Theme.AwaazAI" parent="Theme.Material3.Dark.NoActionBar">
+themes_xml = """<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AwaazAI" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/accent_primary</item>
         <item name="colorSecondary">@color/accent_secondary</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
     </style>
+</resources>
+"""
+
+# 13b. res/values/styles.xml
+styles_xml = """<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AwaazAI" />
 </resources>
 """
 
@@ -980,6 +990,7 @@ files_to_write = {
     "app/src/main/res/values/strings.xml": strings_xml,
     "app/src/main/res/values/colors.xml": colors_xml,
     "app/src/main/res/values/themes.xml": themes_xml,
+    "app/src/main/res/values/styles.xml": styles_xml,
     "app/src/main/res/drawable/ic_sparkles.xml": ic_sparkles_xml,
     "app/src/main/res/drawable/ic_play.xml": ic_play_xml,
     "app/src/main/res/drawable/ic_stop.xml": ic_stop_xml,

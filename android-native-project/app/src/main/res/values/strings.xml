@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Awaaz AI Studio</string>
+    <string name="app_subtitle">آواز اے آئی اسٹوڈیو • Native Android</string>
+    <string name="label_input_text">متن درج کریں (Enter Text or Poetry)</string>
+    <string name="label_select_voice">آواز منتخب کریں (Select Voice Artist)</string>
+    <string name="label_speed">رفتار (Speed)</string>
+    <string name="btn_generate_voice">آواز تیار کریں (Generate AI Voice)</string>
+    <string name="btn_play">سنیں (Play)</string>
+    <string name="btn_stop">روکیں (Stop)</string>
+    <string name="btn_save">فون میں محفوظ کریں (Save MP3)</string>
+    <string name="error_empty_text">برائے کرم کچھ متن یا شاعری لکھیں</string>
+    <string name="sample_poetry_urdu">ستاروں سے آگے جہاں اور بھی ہیں&#10;ابھی عشق کے امتحاں اور بھی ہیں</string>
+    <string name="sample_poetry_hindi">सितारों से आगे जहाँ और भी हैं&#10;अभी इश्क़ के इम्तिहाँ और भी हैं</string>
+    <string name="sample_poetry_en">Beyond the stars are other worlds,&#10;And many more trials in love await.</string>
+</resources>
