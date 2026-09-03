@@ -249,6 +249,51 @@ export const AndroidApkModal: React.FC<AndroidApkModalProps> = ({ isOpen, onClos
                 </div>
               </div>
 
+              {/* 4 Pillars of Native Architecture */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/30 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>نیا اینڈرائیڈ اپ ڈیٹ: 4 بنیادی ستون (4 Core Enhancements Added):</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                    <div className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px]">
+                      ⚡ <span>1. Native WebView Bridge</span>
+                    </div>
+                    <p className="text-[10px] text-white/70 leading-relaxed">
+                      <code>@JavascriptInterface</code> کا مکمل کنکشن: Native Toasts، Haptic Feedback، فون اسٹوریج میں ڈائریکٹ آڈیو سیو، اور نیٹو شیئر شیٹ۔
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                    <div className="font-bold text-emerald-300 flex items-center gap-1.5 text-[11px]">
+                      📁 <span>2. Native File Access Enabled</span>
+                    </div>
+                    <p className="text-[10px] text-white/70 leading-relaxed">
+                      <code>allowFileAccess</code> & <code>onShowFileChooser</code>: فون میموری سے کسی بھی آڈیو یا ٹیکسٹ فائل کا براؤز اور اپلوڈ بغیر کسی رکاوٹ کے ممکن۔
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                    <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-[11px]">
+                      🔄 <span>3. Resource Loading Fixed</span>
+                    </div>
+                    <p className="text-[10px] text-white/70 leading-relaxed">
+                      <code>shouldInterceptRequest</code> ایسٹ لوکیشن اور درست MIME types (.js, .css, .woff2, .mp3): کوئی وائٹ اسکرین یا لوکل پاتھ ایرر نہیں۔
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                    <div className="font-bold text-pink-300 flex items-center gap-1.5 text-[11px]">
+                      🛡️ <span>4. Smart Permission Logic</span>
+                    </div>
+                    <p className="text-[10px] text-white/70 leading-relaxed">
+                      <code>RECORD_AUDIO</code> اور اسٹوریج کے ڈائنامک رن ٹائم پرمیشن ڈائیلاگ اور WebChromeClient میں WebRTC آڈیو کیپچر گرانٹس۔
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Step-by-step instructions */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-white/70">

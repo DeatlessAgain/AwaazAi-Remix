@@ -12,6 +12,11 @@ import {
   convertAudioToFormat,
   triggerBlobDownload,
 } from './audioFormatConverter';
+import {
+  isNativeAndroidApp,
+  saveAudioFileToNativeStorage,
+  triggerNativeHaptic,
+} from './nativeBridge';
 
 export {
   getLibraryFromDB,
@@ -62,6 +67,14 @@ export function downloadAudioFile(
   fileName = 'awaaz-ai-voice.wav',
   mimeType = 'audio/wav'
 ) {
+  triggerNativeHaptic(40);
+
+  // If running inside Android APK native container, save directly to device storage
+  if (isNativeAndroidApp()) {
+    const success = saveAudioFileToNativeStorage(base64, fileName);
+    if (success) return;
+  }
+
   try {
     const byteCharacters = atob(base64);
     const byteNumbers = new Array(byteCharacters.length);

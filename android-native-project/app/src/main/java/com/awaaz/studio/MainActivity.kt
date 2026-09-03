@@ -1,10 +1,12 @@
 package com.awaaz.studio
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -12,7 +14,15 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Base64
+import android.util.Log
 import android.view.View
+import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -21,6 +31,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
@@ -48,6 +59,45 @@ class MainActivity : AppCompatActivity() {
     private var currentSpeechText: String = ""
     private var isUserTrackingSeekBar = false
 
+    private var webViewFilePathCallback: ValueCallback<Array<Uri>>? = null
+
+    // Permission launcher for Runtime Permissions
+    private val requestPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val recordGranted = perms[android.Manifest.permission.RECORD_AUDIO] ?: false
+        val toastMsg = if (recordGranted) {
+            "مائیکروفون اور آڈیو اجازت منظور ہو گئی (Permissions Granted)"
+        } else {
+            "کچھ اجازتیں نہیں مل سکیں (Permissions Denied)"
+        }
+        Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
+        binding.webViewStudio.evaluateJavascript(
+            "if (window.onNativePermissionsResult) window.onNativePermissionsResult($recordGranted);", null
+        )
+    }
+
+    // Native File Chooser launcher for WebChromeClient
+    private val fileChooserLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            val uris = when {
+                data?.clipData != null -> {
+                    val count = data.clipData!!.itemCount
+                    Array(count) { i -> data.clipData!!.getItemAt(i).uri }
+                }
+                data?.data != null -> arrayOf(data.data!!)
+                else -> null
+            }
+            webViewFilePathCallback?.onReceiveValue(uris)
+        } else {
+            webViewFilePathCallback?.onReceiveValue(null)
+        }
+        webViewFilePathCallback = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -63,6 +113,7 @@ class MainActivity : AppCompatActivity() {
         setupAudioCallbacks()
         setupBackNavigation()
         updateNetworkStatus()
+        checkAndRequestPermissions()
     }
 
     private fun updateNetworkStatus() {
@@ -302,9 +353,106 @@ class MainActivity : AppCompatActivity() {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.databaseEnabled = true
+
+        // Requirement 2: Native file and content access
+        settings.allowFileAccess = true
+        settings.allowContentAccess = true
+        settings.allowFileAccessFromFileURLs = true
+        settings.allowUniversalAccessFromFileURLs = true
+        settings.mediaPlaybackRequiresUserGesture = false
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
-        binding.webViewStudio.webViewClient = WebViewClient()
-        binding.webViewStudio.loadUrl(ApiClient.serverBaseUrl)
+
+        // Requirement 1: Register Native WebView Bridge
+        val bridge = WebAppInterface(this)
+        binding.webViewStudio.addJavascriptInterface(bridge, "AndroidBridge")
+        binding.webViewStudio.addJavascriptInterface(bridge, "Android")
+
+        // Requirement 3: Resource loading & Asset interception
+        binding.webViewStudio.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    if (url.contains("run.app") || url.contains("localhost") || url.contains("ai.studio")) {
+                        return false
+                    }
+                    try {
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(browserIntent)
+                        return true
+                    } catch (ignored: Exception) {}
+                }
+                return false
+            }
+
+            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                val uri = request?.url ?: return null
+                var path = uri.path ?: return null
+                if (path.startsWith("/")) path = path.substring(1)
+                if (path.isEmpty() || path == "android_asset") path = "index.html"
+                if (path.startsWith("android_asset/")) path = path.substring("android_asset/".length)
+
+                try {
+                    val isAsset = assets.open(path)
+                    val mime = getAssetMimeType(path)
+                    val headers = mapOf(
+                        "Access-Control-Allow-Origin" to "*",
+                        "Access-Control-Allow-Methods" to "GET, POST, OPTIONS",
+                        "Access-Control-Allow-Headers" to "*"
+                    )
+                    return WebResourceResponse(mime, "utf-8", 200, "OK", headers, isAsset)
+                } catch (e: Exception) {
+                    if (!path.startsWith("assets/")) {
+                        try {
+                            val isSub = assets.open("assets/$path")
+                            val mime = getAssetMimeType(path)
+                            val headers = mapOf(
+                                "Access-Control-Allow-Origin" to "*",
+                                "Access-Control-Allow-Methods" to "GET, POST, OPTIONS",
+                                "Access-Control-Allow-Headers" to "*"
+                            )
+                            return WebResourceResponse(mime, "utf-8", 200, "OK", headers, isSub)
+                        } catch (ignored: Exception) {}
+                    }
+                }
+                return super.shouldInterceptRequest(view, request)
+            }
+        }
+
+        // Requirement 2 & 4: WebChromeClient for File Chooser & HTML5 Audio Permission
+        binding.webViewStudio.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                runOnUiThread {
+                    request?.grant(request.resources)
+                }
+            }
+
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                webViewFilePathCallback?.onReceiveValue(null)
+                webViewFilePathCallback = filePathCallback
+
+                val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                }
+                val chooser = Intent.createChooser(intent, "آڈیو یا فائل منتخب کریں (Select File)")
+                fileChooserLauncher.launch(chooser)
+                return true
+            }
+        }
+
+        val isOfflineOnly = prefs.getBoolean("offline_only", false) || !isNetworkAvailable()
+        if (isOfflineOnly) {
+            binding.webViewStudio.loadUrl("file:///android_asset/index.html")
+        } else {
+            binding.webViewStudio.loadUrl(ApiClient.serverBaseUrl)
+        }
     }
 
     private fun setupAudioCallbacks() {
@@ -530,6 +678,167 @@ class MainActivity : AppCompatActivity() {
         val activeNetwork = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun checkAndRequestPermissions() {
+        val needed = mutableListOf<String>()
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(android.Manifest.permission.RECORD_AUDIO)
+        }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }
+        if (needed.isNotEmpty()) {
+            requestPermissionsLauncher.launch(needed.toTypedArray())
+        }
+    }
+
+    private fun getAssetMimeType(path: String): String {
+        val lower = path.lowercase(Locale.ROOT)
+        return when {
+            lower.endsWith(".html") || lower.endsWith(".htm") -> "text/html"
+            lower.endsWith(".js") || lower.endsWith(".mjs") -> "application/javascript"
+            lower.endsWith(".css") -> "text/css"
+            lower.endsWith(".json") -> "application/json"
+            lower.endsWith(".svg") -> "image/svg+xml"
+            lower.endsWith(".png") -> "image/png"
+            lower.endsWith(".jpg") || lower.endsWith(".jpeg") -> "image/jpeg"
+            lower.endsWith(".woff2") -> "font/woff2"
+            lower.endsWith(".woff") -> "font/woff"
+            lower.endsWith(".ttf") -> "font/ttf"
+            lower.endsWith(".wav") -> "audio/wav"
+            lower.endsWith(".mp3") -> "audio/mpeg"
+            else -> "application/octet-stream"
+        }
+    }
+
+    inner class WebAppInterface(private val context: Context) {
+        @JavascriptInterface
+        fun isNativeApp(): Boolean = true
+
+        @JavascriptInterface
+        fun getAppVersion(): String = "2.0.0-native"
+
+        @JavascriptInterface
+        fun showToast(message: String) {
+            runOnUiThread {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        @JavascriptInterface
+        fun vibrate(durationMs: Long) {
+            try {
+                val v = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                v?.let {
+                    if (it.hasVibrator()) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            it.vibrate(android.os.VibrationEffect.createOneShot(if (durationMs > 0) durationMs else 50L, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            it.vibrate(if (durationMs > 0) durationMs else 50L)
+                        }
+                    }
+                }
+            } catch (ignored: Exception) {}
+        }
+
+        @JavascriptInterface
+        fun shareText(text: String, title: String?) {
+            try {
+                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, text)
+                }
+                val chooser = Intent.createChooser(sendIntent, title ?: "Awaaz AI Studio")
+                context.startActivity(chooser)
+            } catch (e: Exception) {
+                Log.e("AwaazNativeBridge", "Share failed", e)
+            }
+        }
+
+        @JavascriptInterface
+        fun saveAudioFile(base64Data: String, filename: String?): Boolean {
+            return try {
+                val clean = base64Data
+                    .replace("data:audio/wav;base64,", "")
+                    .replace("data:audio/mp3;base64,", "")
+                    .replace("data:audio/mpeg;base64,", "")
+                val bytes = Base64.decode(clean, Base64.DEFAULT)
+                val name = if (!filename.isNullOrBlank()) filename else "AwaazAI_${System.currentTimeMillis()}.wav"
+                saveAudioToDevice(bytes, name)
+                true
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(context, "محفوظ کرنے میں خرابی: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                false
+            }
+        }
+
+        @JavascriptInterface
+        fun shareAudio(base64Data: String, filename: String?, title: String?) {
+            try {
+                val clean = base64Data
+                    .replace("data:audio/wav;base64,", "")
+                    .replace("data:audio/mp3;base64,", "")
+                    .replace("data:audio/mpeg;base64,", "")
+                val bytes = Base64.decode(clean, Base64.DEFAULT)
+                shareAudioBytes(bytes)
+            } catch (e: Exception) {
+                Log.e("AwaazNativeBridge", "Share audio error", e)
+            }
+        }
+
+        @JavascriptInterface
+        fun hasMicrophonePermission(): Boolean {
+            return checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        }
+
+        @JavascriptInterface
+        fun requestMicrophonePermission() {
+            requestPermissionsLauncher.launch(arrayOf(android.Manifest.permission.RECORD_AUDIO))
+        }
+
+        @JavascriptInterface
+        fun playNativeAudio(base64OrPath: String) {
+            try {
+                if (base64OrPath.startsWith("http://") || base64OrPath.startsWith("https://")) {
+                    lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        try {
+                            val bytes = java.net.URL(base64OrPath).readBytes()
+                            runOnUiThread { audioEngine.playAudioBytes(bytes, 1.0f) }
+                        } catch (e: Exception) {
+                            Log.e("AwaazNativeBridge", "URL fetch error", e)
+                        }
+                    }
+                } else {
+                    val clean = base64OrPath
+                        .replace("data:audio/wav;base64,", "")
+                        .replace("data:audio/mp3;base64,", "")
+                        .replace("data:audio/mpeg;base64,", "")
+                    val bytes = Base64.decode(clean, Base64.DEFAULT)
+                    audioEngine.playAudioBytes(bytes, 1.0f)
+                }
+            } catch (e: Exception) {
+                Log.e("AwaazNativeBridge", "Native audio play error", e)
+            }
+        }
+
+        @JavascriptInterface
+        fun stopNativeAudio() {
+            audioEngine.stop()
+        }
+
+        @JavascriptInterface
+        fun openExternalBrowser(url: String) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                context.startActivity(intent)
+            } catch (ignored: Exception) {}
+        }
     }
 
     override fun onDestroy() {

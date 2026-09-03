@@ -46,16 +46,34 @@ jobs:
           unzip -q gradle.zip
           echo "$GITHUB_WORKSPACE/gradle-8.5/bin" >> $GITHUB_PATH
 
-      - name: Build Android APK
+      - name: Configure Global Gradle Properties & AndroidX
+        run: |
+          mkdir -p ~/.gradle
+          cat << 'EOF' > ~/.gradle/gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          kotlin.code.style=official
+          android.nonTransitiveRClass=true
+          EOF
+          cp ~/.gradle/gradle.properties android-native-project/gradle.properties || true
+          cp ~/.gradle/gradle.properties ./gradle.properties || true
+
+      - name: Build Android APK (Clean & Assemble with AndroidX Flags)
         run: |
           export PATH="$GITHUB_WORKSPACE/gradle-8.5/bin:$PATH"
           gradle -v
           if [ -f "android-native-project/settings.gradle.kts" ]; then
             cd android-native-project
-            gradle assembleDebug --no-daemon --stacktrace
-          else
-            gradle assembleDebug --no-daemon --stacktrace
           fi
+          # Clean build first to eliminate stale cache
+          gradle clean --no-daemon -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true -Dandroid.useAndroidX=true -Dandroid.enableJetifier=true
+          # Assemble debug with explicit AndroidX properties
+          gradle assembleDebug --no-daemon --stacktrace \
+            -Pandroid.useAndroidX=true \
+            -Pandroid.enableJetifier=true \
+            -Dandroid.useAndroidX=true \
+            -Dandroid.enableJetifier=true
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
