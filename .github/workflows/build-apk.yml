@@ -20,11 +20,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install Web Dependencies & Build Full Studio
         run: |
-          npm ci || npm install
+          npm install
           npm run build
           mkdir -p android-native-project/app/src/main/assets
           cp -r dist/* android-native-project/app/src/main/assets/
