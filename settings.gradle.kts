@@ -14,7 +14,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "awaazai-remix"
-include(":android-native-project")
-project(":android-native-project").projectDir = file("android-native-project")
-include(":android-native-project:app")
-project(":android-native-project:app").projectDir = file("android-native-project/app")
+include(":app")
+project(":app").projectDir = file("android-native-project/app")
+
