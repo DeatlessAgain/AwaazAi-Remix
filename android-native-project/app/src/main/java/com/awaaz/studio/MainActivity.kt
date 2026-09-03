@@ -303,7 +303,7 @@ class MainActivity : AppCompatActivity() {
             val poetry = binding.etPoetryInput.text?.toString()?.trim() ?: ""
             if (poetry.isEmpty()) {
                 Toast.makeText(this, "برائے کرم شعر یا مصرع درج کریں", Toast.LENGTH_SHORT).show()
-                return
+                return@setOnClickListener
             }
 
             binding.globalProgressBar.visibility = View.VISIBLE
