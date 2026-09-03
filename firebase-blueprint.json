@@ -1,0 +1,32 @@
+{
+  "entities": {
+    "AudioItem": {
+      "title": "AudioItem",
+      "description": "A saved neural synthesized speech audio clip with voice and emotion metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the audio item" },
+        "text": { "type": "string", "description": "Script text that was synthesized" },
+        "voice": { "type": "string", "description": "Name of the voice persona" },
+        "voiceId": { "type": "string", "description": "ID of the voice persona" },
+        "style": { "type": "string", "description": "Speech delivery style" },
+        "emotion": { "type": "string", "description": "Primary emotional tone" },
+        "emotionIntensity": { "type": "number", "description": "Intensity of the emotion between 0 and 100" },
+        "vocalPitch": { "type": "number", "description": "Vocal pitch adjustment" },
+        "language": { "type": "string", "description": "Language of the speech (urdu, hindi, english)" },
+        "durationSeconds": { "type": "number", "description": "Duration in seconds" },
+        "audioBase64": { "type": "string", "description": "Base64 encoded audio payload" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of creation" },
+        "bgMusicId": { "type": "string", "description": "Optional background music ID" },
+        "isFavorite": { "type": "boolean", "description": "Whether user favorited this item" }
+      },
+      "required": ["id", "text", "voice", "voiceId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/audio_items/{itemId}": {
+      "schema": "AudioItem",
+      "description": "User saved audio library items synced across devices"
+    }
+  }
+}

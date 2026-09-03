@@ -1,0 +1,10 @@
+{
+  "name": "Remix Awaaz AI V1 - Realistic Voice Generator",
+  "description": "Generate ultra-realistic human voices for Urdu, English, and Hindi text with instant high-quality audio downloads.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

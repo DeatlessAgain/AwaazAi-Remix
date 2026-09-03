@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User-specific audio items synced across devices
+    match /users/{userId}/audio_items/{itemId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public/Shared sync channel pairing for cross-device access with Sync Keys
+    match /sync_devices/{syncKey} {
+      allow read, write: if true;
+    }
+  }
+}
