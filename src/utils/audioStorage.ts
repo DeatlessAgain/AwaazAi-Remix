@@ -170,6 +170,36 @@ export async function deleteItemFromDB(id: string): Promise<void> {
 }
 
 /**
+ * Delete multiple items by ids from IndexedDB
+ */
+export async function deleteItemsFromDB(ids: string[]): Promise<void> {
+  if (!ids || ids.length === 0) return;
+  const idSet = new Set(ids);
+  inMemoryBackup = inMemoryBackup.filter((item) => !idSet.has(item.id));
+
+  try {
+    const db = await openDB();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      for (const id of ids) {
+        store.delete(id);
+      }
+
+      transaction.oncomplete = () => {
+        resolve();
+      };
+
+      transaction.onerror = () => {
+        reject(transaction.error);
+      };
+    });
+  } catch (err) {
+    console.warn('Failed to delete items batch from IndexedDB:', err);
+  }
+}
+
+/**
  * Clear all items from IndexedDB
  */
 export async function clearLibraryDB(): Promise<void> {

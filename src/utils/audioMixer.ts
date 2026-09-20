@@ -113,17 +113,28 @@ function writeString(view: DataView, offset: number, string: string) {
   }
 }
 
+export interface AdvancedVocalEffects {
+  mushairaEchoLevel?: number; // 0 to 100
+  humNawaChorus?: boolean; // Backing chorus / hum-nawa effect
+  chorusMixLevel?: number; // 0 to 100
+}
+
 /**
- * Mixes Voice Audio Base64 with Background Music and Auto-Ducking
+ * Mixes Voice Audio Base64 with Background Music, Auto-Ducking and Optional Studio Vocal FX
  */
 export async function mixVoiceAndBackgroundMusic(
   voiceBase64: string,
-  bgConfig: BackgroundMusicConfig
+  bgConfig: BackgroundMusicConfig,
+  vocalEffects?: AdvancedVocalEffects
 ): Promise<{
   mixedBase64: string;
   durationSeconds: number;
 }> {
-  if (!bgConfig.trackId || bgConfig.trackId === 'none' || bgConfig.volume <= 0) {
+  const hasBgm = bgConfig.trackId && bgConfig.trackId !== 'none' && bgConfig.volume > 0;
+  const echoLevel = vocalEffects?.mushairaEchoLevel || 0;
+  const hasChorus = Boolean(vocalEffects?.humNawaChorus);
+
+  if (!hasBgm && echoLevel <= 0 && !hasChorus) {
     return {
       mixedBase64: voiceBase64,
       durationSeconds: 0,
@@ -136,29 +147,23 @@ export async function mixVoiceAndBackgroundMusic(
     const sampleRate = voiceBuffer.sampleRate;
     const voiceDuration = voiceBuffer.duration;
 
-    // Add 0.8s tail for smooth BGM musical outro fade
-    const totalDuration = voiceDuration + 0.8;
+    // Add tail for smooth BGM musical outro fade or echo tail
+    const extraTail = echoLevel > 0 ? 1.2 : 0.8;
+    const totalDuration = voiceDuration + extraTail;
     const totalSamples = Math.ceil(totalDuration * sampleRate);
 
-    // 2. Obtain background music buffer
+    // 2. Obtain background music buffer if enabled
     let bgBuffer: AudioBuffer | null = null;
-    if (bgConfig.customAudioBase64) {
-      // Decode user custom upload
-      bgBuffer = await decodeBase64ToAudioBuffer(bgConfig.customAudioBase64);
-    } else {
-      // Synthesize procedural preset
-      bgBuffer = await synthesizeBackgroundMusicBuffer(
-        bgConfig.trackId,
-        totalDuration,
-        sampleRate
-      );
-    }
-
-    if (!bgBuffer) {
-      return {
-        mixedBase64: voiceBase64,
-        durationSeconds: voiceDuration,
-      };
+    if (hasBgm) {
+      if (bgConfig.customAudioBase64) {
+        bgBuffer = await decodeBase64ToAudioBuffer(bgConfig.customAudioBase64);
+      } else {
+        bgBuffer = await synthesizeBackgroundMusicBuffer(
+          bgConfig.trackId,
+          totalDuration,
+          sampleRate
+        );
+      }
     }
 
     // 3. Render final mix in OfflineAudioContext
@@ -171,59 +176,101 @@ export async function mixVoiceAndBackgroundMusic(
     voiceGain.gain.setValueAtTime(1.0, 0);
     voiceSource.connect(voiceGain);
     voiceGain.connect(offlineCtx.destination);
-    voiceSource.start(0);
 
-    // Background Music Source Node
-    const bgSource = offlineCtx.createBufferSource();
-    bgSource.buffer = bgBuffer;
-    bgSource.loop = true;
+    // Optional Hum-Nawa (Backing Chorus) effect: Parallel doubled voice with subtle delay and filtering
+    if (hasChorus) {
+      const chorusSource = offlineCtx.createBufferSource();
+      chorusSource.buffer = voiceBuffer;
+      const chorusGain = offlineCtx.createGain();
+      chorusGain.gain.setValueAtTime(0.38, 0);
 
-    const bgGain = offlineCtx.createGain();
-    const nominalBgGain = Math.max(0, Math.min(1, (bgConfig.volume / 100) * 0.7));
+      const chorusFilter = offlineCtx.createBiquadFilter();
+      chorusFilter.type = 'lowpass';
+      chorusFilter.frequency.setValueAtTime(3200, 0);
 
-    // Calculate Speech RMS envelope for Auto-Ducking
-    if (bgConfig.autoDucking) {
-      const windowSize = Math.floor(sampleRate * 0.05); // 50ms window
-      const voiceSamples = voiceBuffer.getChannelData(0);
-      const numWindows = Math.floor(voiceSamples.length / windowSize);
-
-      bgGain.gain.setValueAtTime(nominalBgGain, 0);
-
-      const duckedGain = nominalBgGain * 0.32; // Lower by ~68% when voice is loud
-
-      for (let w = 0; w < numWindows; w++) {
-        let sumSq = 0;
-        const startIdx = w * windowSize;
-        for (let i = 0; i < windowSize; i++) {
-          const s = voiceSamples[startIdx + i];
-          sumSq += s * s;
-        }
-        const rms = Math.sqrt(sumSq / windowSize);
-        const windowTime = (w * windowSize) / sampleRate;
-
-        if (rms > 0.018) {
-          // Voice active -> duck music
-          bgGain.gain.setTargetAtTime(duckedGain, windowTime, 0.06);
-        } else {
-          // Pause / Silence -> restore music
-          bgGain.gain.setTargetAtTime(nominalBgGain, windowTime, 0.2);
-        }
-      }
-
-      // Outro fade out
-      bgGain.gain.setValueAtTime(nominalBgGain, voiceDuration);
-      bgGain.gain.linearRampToValueAtTime(0, totalDuration);
-    } else {
-      // Static BGM volume with gentle intro and outro fades
-      bgGain.gain.setValueAtTime(0, 0);
-      bgGain.gain.linearRampToValueAtTime(nominalBgGain, 0.3);
-      bgGain.gain.setValueAtTime(nominalBgGain, voiceDuration + 0.1);
-      bgGain.gain.linearRampToValueAtTime(0, totalDuration);
+      chorusSource.connect(chorusFilter);
+      chorusFilter.connect(chorusGain);
+      chorusGain.connect(offlineCtx.destination);
+      // Start 25ms later to create natural acoustic group doubling
+      chorusSource.start(0.025);
     }
 
-    bgSource.connect(bgGain);
-    bgGain.connect(offlineCtx.destination);
-    bgSource.start(0);
+    // Optional Mushaira Mic Echo & Reverb effect
+    if (echoLevel > 0) {
+      const delayNode = offlineCtx.createDelay(1.0);
+      delayNode.delayTime.setValueAtTime(0.19, 0); // 190ms authentic mic delay
+
+      const feedbackNode = offlineCtx.createGain();
+      const feedbackAmount = Math.min(0.48, (echoLevel / 100) * 0.48);
+      feedbackNode.gain.setValueAtTime(feedbackAmount, 0);
+
+      const echoFilter = offlineCtx.createBiquadFilter();
+      echoFilter.type = 'lowpass';
+      echoFilter.frequency.setValueAtTime(2600, 0);
+
+      const echoWetGain = offlineCtx.createGain();
+      const wetAmount = Math.min(0.55, (echoLevel / 100) * 0.55);
+      echoWetGain.gain.setValueAtTime(wetAmount, 0);
+
+      // Connect: Voice -> Delay -> Feedback Loop -> Filter -> Wet Gain -> Destination
+      voiceSource.connect(delayNode);
+      delayNode.connect(echoFilter);
+      echoFilter.connect(feedbackNode);
+      feedbackNode.connect(delayNode);
+      echoFilter.connect(echoWetGain);
+      echoWetGain.connect(offlineCtx.destination);
+    }
+
+    voiceSource.start(0);
+
+    // Background Music Source Node (if present)
+    if (bgBuffer && hasBgm) {
+      const bgSource = offlineCtx.createBufferSource();
+      bgSource.buffer = bgBuffer;
+      bgSource.loop = true;
+
+      const bgGain = offlineCtx.createGain();
+      const nominalBgGain = Math.max(0, Math.min(1, (bgConfig.volume / 100) * 0.7));
+
+      // Auto-Ducking calculation
+      if (bgConfig.autoDucking) {
+        const windowSize = Math.floor(sampleRate * 0.05);
+        const voiceSamples = voiceBuffer.getChannelData(0);
+        const numWindows = Math.floor(voiceSamples.length / windowSize);
+
+        bgGain.gain.setValueAtTime(nominalBgGain, 0);
+        const duckedGain = nominalBgGain * 0.32;
+
+        for (let w = 0; w < numWindows; w++) {
+          let sumSq = 0;
+          const startIdx = w * windowSize;
+          for (let i = 0; i < windowSize; i++) {
+            const s = voiceSamples[startIdx + i];
+            sumSq += s * s;
+          }
+          const rms = Math.sqrt(sumSq / windowSize);
+          const windowTime = (w * windowSize) / sampleRate;
+
+          if (rms > 0.018) {
+            bgGain.gain.setTargetAtTime(duckedGain, windowTime, 0.06);
+          } else {
+            bgGain.gain.setTargetAtTime(nominalBgGain, windowTime, 0.2);
+          }
+        }
+
+        bgGain.gain.setValueAtTime(nominalBgGain, voiceDuration);
+        bgGain.gain.linearRampToValueAtTime(0, totalDuration);
+      } else {
+        bgGain.gain.setValueAtTime(0, 0);
+        bgGain.gain.linearRampToValueAtTime(nominalBgGain, 0.3);
+        bgGain.gain.setValueAtTime(nominalBgGain, voiceDuration + 0.1);
+        bgGain.gain.linearRampToValueAtTime(0, totalDuration);
+      }
+
+      bgSource.connect(bgGain);
+      bgGain.connect(offlineCtx.destination);
+      bgSource.start(0);
+    }
 
     // 4. Render and export
     const renderedBuffer = await offlineCtx.startRendering();

@@ -29,6 +29,7 @@ import { BACKGROUND_MUSIC_TRACKS } from '../data/backgroundMusic';
 import { playTrackPreview, stopTrackPreview } from '../utils/bgMusicSynthesizer';
 import { mixVoiceAndBackgroundMusic } from '../utils/audioMixer';
 import { VisualLyricsCuePrompter } from './VisualLyricsCuePrompter';
+import { AINaatSingingSuite } from './AINaatSingingSuite';
 
 interface AINaatSingingStudioProps {
   onAudioGenerated: (item: GeneratedAudioItem) => void;
@@ -150,6 +151,9 @@ export const AINaatSingingStudio: React.FC<AINaatSingingStudioProps> = ({
   const [echoLevel, setEchoLevel] = useState<number>(35);
   const [reverbDepth, setReverbDepth] = useState<number>(50);
   const [vocalVibrato, setVocalVibrato] = useState<number>(45);
+  const [enableChorus, setEnableChorus] = useState<boolean>(true);
+  const [chorusLevel, setChorusLevel] = useState<number>(40);
+  const [selectedMaqam, setSelectedMaqam] = useState<string>('hijaz');
 
   // AI Advisor Analysis State
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -258,22 +262,34 @@ export const AINaatSingingStudio: React.FC<AINaatSingingStudioProps> = ({
       let finalAudioBase64 = rawVoiceBase64;
       let usedBgmName = 'بغیر میوزک';
 
-      // Mix with selected BGM if enabled
-      if (selectedBgmTrackId && selectedBgmTrackId !== 'none' && bgmVolume > 0) {
-        setStatusMessage('پس منظر کی موسیقی (Daf/Harmonium/Drone) کو آواز کے ساتھ مکس کیا جا رہا ہے...');
-        const mixResult = await mixVoiceAndBackgroundMusic(rawVoiceBase64, {
-          trackId: selectedBgmTrackId,
-          volume: bgmVolume,
-          autoDucking: true,
-        });
+      // Mix with selected BGM and apply Advanced DSP (Echo + Hum-Nawa Chorus)
+      setStatusMessage('پس منظر کی موسیقی، ایکو اور ہم نوا کورس کو مکس کیا جا رہا ہے...');
+      try {
+        const mixResult = await mixVoiceAndBackgroundMusic(
+          rawVoiceBase64,
+          {
+            trackId: selectedBgmTrackId,
+            volume: selectedBgmTrackId !== 'none' ? bgmVolume : 0,
+            autoDucking: true,
+          },
+          {
+            mushairaEchoLevel: echoLevel,
+            chorusMixLevel: enableChorus ? chorusLevel : 0,
+          }
+        );
         if (mixResult && mixResult.mixedBase64) {
           finalAudioBase64 = mixResult.mixedBase64;
           if (mixResult.durationSeconds > 0) {
             durationSeconds = mixResult.durationSeconds;
           }
-          const bgmObj = BACKGROUND_MUSIC_TRACKS.find((t) => t.id === selectedBgmTrackId);
-          usedBgmName = bgmObj ? bgmObj.urduName : selectedBgmTrackId;
         }
+      } catch (mixErr) {
+        console.warn('Audio DSP mixing error:', mixErr);
+      }
+
+      if (selectedBgmTrackId && selectedBgmTrackId !== 'none') {
+        const bgmObj = BACKGROUND_MUSIC_TRACKS.find((t) => t.id === selectedBgmTrackId);
+        usedBgmName = bgmObj ? bgmObj.urduName : selectedBgmTrackId;
       }
 
       const voiceMeta = VOICES.find((v) => v.id === selectedVoiceId) || VOICES[0];
@@ -410,6 +426,20 @@ export const AINaatSingingStudio: React.FC<AINaatSingingStudioProps> = ({
         </div>
       </div>
 
+      {/* AI Sacred Suite: Lyricist, Performance Directives & Tajweed Guidance */}
+      <AINaatSingingSuite
+        currentLyrics={lyrics}
+        selectedGenre={analysisResult?.genreDetected || selectedStyle}
+        onApplyLyrics={(newLyrics, mode) => {
+          if (mode === 'replace') {
+            setLyrics(newLyrics);
+          } else {
+            setLyrics((prev) => `${prev.trim()}\n\n${newLyrics.trim()}`);
+          }
+          setAnalysisResult(null);
+        }}
+      />
+
       {/* Main Studio Controls: Lyrics Editor & BGM Advisor */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Lyrics & Vocal Performance (8 cols) */}
@@ -473,6 +503,63 @@ export const AINaatSingingStudio: React.FC<AINaatSingingStudioProps> = ({
                   {analysisResult.bgmAdvice}
                 </div>
 
+                {/* Sacred Maqam Details Card */}
+                {analysisResult.maqamDetails && (
+                  <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-right space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-bold">
+                        SACRED MAQAM (مقامِ روحانی)
+                      </span>
+                      <span className="text-xs font-bold text-amber-300 font-urdu">
+                        {analysisResult.maqamDetails.nameUrdu}
+                      </span>
+                    </div>
+                    <p className="text-xs text-emerald-200/90 font-urdu leading-relaxed">
+                      {analysisResult.maqamDetails.spiritualSignificance}
+                    </p>
+                    <div className="text-[11px] text-white/60 font-urdu">
+                      {analysisResult.maqamDetails.melodicFlavor}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tajweed & Pronunciation Pointers */}
+                {analysisResult.tajweedPointers && analysisResult.tajweedPointers.length > 0 && (
+                  <div className="p-3.5 rounded-xl bg-black/40 border border-amber-500/30 text-right space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold">
+                        تجوید و تلفظ کے خصوصی نکات (AUTHENTIC PRONUNCIATION)
+                      </span>
+                      <span className="text-[10px] text-amber-300/80">تلفظ و مخرج کی حفاظت</span>
+                    </div>
+                    <div className="space-y-1">
+                      {analysisResult.tajweedPointers.map((tip, idx) => (
+                        <div key={idx} className="flex items-start justify-end gap-2 text-xs font-urdu text-white/80">
+                          <span>{tip}</span>
+                          <span className="text-amber-400 font-bold">✦</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hum-Nawa Choir Recommendation */}
+                {analysisResult.chorusRecommendation && (
+                  <div className="p-2.5 rounded-xl bg-teal-950/30 border border-teal-500/20 text-right text-xs text-teal-200 font-urdu flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEnableChorus(true);
+                        setChorusLevel(45);
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 text-[10px] font-sans border border-teal-500/30"
+                    >
+                      لاگو کریں (Apply Choir)
+                    </button>
+                    <span>🎙️ <strong>ہم نوا کورس مشورہ:</strong> {analysisResult.chorusRecommendation}</span>
+                  </div>
+                )}
+
                 {/* Verses Breakdown with Cadence */}
                 {analysisResult.versesBreakdown && analysisResult.versesBreakdown.length > 0 && (
                   <div className="space-y-1.5 pt-1">
@@ -499,6 +586,47 @@ export const AINaatSingingStudio: React.FC<AINaatSingingStudioProps> = ({
                 )}
               </div>
             )}
+
+            {/* Sacred Maqamat Archetype Presets */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span>مقام و لحنِ روحانی (Sacred Maqamat Presets)</span>
+                </span>
+                <span className="text-[10px] text-white/40">Classical Eastern Modulations</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {[
+                  { id: 'hijaz', name: 'مقامِ حجاز (Hijaz)', desc: 'رقت، انکسار، درود و سلام', style: 'naat_devotional' as SpeechStyle, emotion: 'sad' as VoiceEmotion },
+                  { id: 'bayati', name: 'مقامِ بیات (Bayati)', desc: 'خشوع، کلامِ پاک، وقار', style: 'naat_devotional' as SpeechStyle, emotion: 'serious' as VoiceEmotion },
+                  { id: 'rast', name: 'مقامِ راست (Rast)', desc: 'عظمت، حمدِ باری تعالیٰ', style: 'naat_devotional' as SpeechStyle, emotion: 'dramatic' as VoiceEmotion },
+                  { id: 'nahawand', name: 'مقامِ نہاوند (Nahawand)', desc: 'محبت، شوق، دلنشین ترنم', style: 'melodic_song' as SpeechStyle, emotion: 'joyful' as VoiceEmotion },
+                  { id: 'saba', name: 'مقامِ صبا (Saba)', desc: 'قلبی سوز، توبہ و استغفار', style: 'naat_devotional' as SpeechStyle, emotion: 'sad' as VoiceEmotion },
+                ].map((m) => {
+                  const isSelected = selectedMaqam === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMaqam(m.id);
+                        setSelectedStyle(m.style);
+                        setSelectedEmotion(m.emotion);
+                      }}
+                      className={`p-2.5 rounded-xl border text-right transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/10 scale-[1.01]'
+                          : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="text-xs font-bold font-urdu text-amber-200">{m.name}</div>
+                      <div className="text-[10px] text-white/50 font-urdu line-clamp-1 mt-0.5">{m.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Vocalist Voice Selection */}
             <div className="space-y-2 pt-2">
@@ -757,6 +885,39 @@ export const AINaatSingingStudio: React.FC<AINaatSingingStudioProps> = ({
                 onChange={(e) => setPitchShift(Number(e.target.value))}
                 className="w-full accent-emerald-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
               />
+            </div>
+
+            {/* Hum-Nawa Backing Choir (ہم نوا کورس) */}
+            <div className="pt-2 border-t border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableChorus}
+                    onChange={(e) => setEnableChorus(e.target.checked)}
+                    className="accent-emerald-500 rounded cursor-pointer"
+                  />
+                  <span>ہم نوا کورس (Hum-Nawa Choir Layer)</span>
+                </label>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 font-mono">
+                  {enableChorus ? `${chorusLevel}%` : 'Off'}
+                </span>
+              </div>
+              {enableChorus && (
+                <div className="space-y-1">
+                  <input
+                    type="range"
+                    min={15}
+                    max={80}
+                    value={chorusLevel}
+                    onChange={(e) => setChorusLevel(Number(e.target.value))}
+                    className="w-full accent-teal-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                  />
+                  <div className="text-[10px] text-teal-300/70 font-urdu leading-tight">
+                    25ms فیز ڈیلی اور ڈبل وائس اثر سے بیکنگ ہمنوا کی آواز بنتی ہے
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

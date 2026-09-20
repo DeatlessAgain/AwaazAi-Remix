@@ -87,6 +87,55 @@ export interface SyncResult {
 }
 
 /**
+ * Prepare and strip redundant duplicate data before cloud sync
+ */
+function prepareItemForSync(item: GeneratedAudioItem): GeneratedAudioItem {
+  const clean: any = { ...item };
+  // If rawVoiceBase64 is identical to audioBase64, omit it to cut payload size by 50%
+  if (clean.rawVoiceBase64 === clean.audioBase64) {
+    delete clean.rawVoiceBase64;
+  }
+  // If audioBase64 alone is very large (> 2.5MB), also omit rawVoiceBase64
+  if (clean.audioBase64 && clean.audioBase64.length > 2.5 * 1024 * 1024) {
+    delete clean.rawVoiceBase64;
+  }
+  return clean as GeneratedAudioItem;
+}
+
+/**
+ * Split items into batches based on actual payload byte size (max 3.5MB per request)
+ * to safely stay within reverse proxy and network payload limits even for full-length songs
+ */
+function chunkItemsByPayloadSize(
+  items: GeneratedAudioItem[],
+  maxBytesPerBatch = 3.5 * 1024 * 1024
+): GeneratedAudioItem[][] {
+  const batches: GeneratedAudioItem[][] = [];
+  let currentBatch: GeneratedAudioItem[] = [];
+  let currentBatchBytes = 0;
+
+  for (const rawItem of items) {
+    const item = prepareItemForSync(rawItem);
+    const itemBytes = (item.audioBase64?.length || 0) + (item.text?.length || 0);
+
+    // If adding this item exceeds max batch size or batch already has 4 items, start new batch
+    if (currentBatch.length > 0 && (currentBatchBytes + itemBytes > maxBytesPerBatch || currentBatch.length >= 4)) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentBatchBytes = 0;
+    }
+
+    currentBatch.push(item);
+    currentBatchBytes += itemBytes;
+  }
+
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+  return batches;
+}
+
+/**
  * Full bidirectional synchronization with Cloud
  * Pushes local library and pulls cloud items, merging without duplicates
  */
@@ -137,44 +186,124 @@ export async function synchronizeLibrary(
 
   // 2. High-speed Cloud Sync Server
   try {
-    const res = await fetch('/api/sync/merge', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        syncKey,
-        items: localItems,
-      }),
-    });
+    // If no local items, simply query cloud library via merge endpoint with empty list
+    if (localItems.length === 0) {
+      const res = await fetch('/api/sync/merge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          syncKey,
+          items: [],
+        }),
+      });
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.error || `Sync failed: ${res.statusText}`);
+      if (!res.ok) {
+        let errMsg = '';
+        try {
+          const text = await res.text();
+          if (text) {
+            try {
+              const json = JSON.parse(text);
+              if (json.error) errMsg = json.error;
+            } catch {
+              if (text.length < 200) errMsg = text;
+            }
+          }
+        } catch {}
+
+        if (!errMsg) {
+          errMsg = `HTTP ${res.status}${res.statusText ? ` (${res.statusText})` : ''}`;
+        }
+        throw new Error(`Sync failed: ${errMsg}`);
+      }
+
+      const data = await res.json();
+      const mergedList: GeneratedAudioItem[] = data.items || [];
+      const now = data.lastSyncedAt || new Date().toISOString();
+      setLastSyncedAt(now);
+      await saveLibraryToDB(mergedList);
+
+      return {
+        success: true,
+        items: mergedList,
+        addedCount: mergedList.length,
+        lastSyncedAt: now,
+        source: 'cloud_server',
+      };
     }
 
-    const data = await res.json();
-    const mergedList: GeneratedAudioItem[] = data.items || localItems;
-    const now = data.lastSyncedAt || new Date().toISOString();
-    setLastSyncedAt(now);
-    await saveLibraryToDB(mergedList);
+    // When local items exist, chunk them dynamically by payload size (max 3.5MB per batch)
+    // to safely stay well beneath server/proxy limits (32M) even with long full songs
+    const batches = chunkItemsByPayloadSize(localItems);
+    let latestMergedList: GeneratedAudioItem[] = localItems;
+    let lastSyncedTimestamp = new Date().toISOString();
+
+    for (const chunk of batches) {
+      const res = await fetch('/api/sync/merge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          syncKey,
+          items: chunk,
+        }),
+      });
+
+      if (!res.ok) {
+        let errMsg = '';
+        try {
+          const text = await res.text();
+          if (text) {
+            try {
+              const json = JSON.parse(text);
+              if (json.error) errMsg = json.error;
+            } catch {
+              if (text.length < 200) errMsg = text;
+            }
+          }
+        } catch {}
+
+        if (!errMsg) {
+          if (res.status === 413) {
+            errMsg = 'Audio clip payload too large for cloud sync (HTTP 413)';
+          } else {
+            errMsg = `HTTP ${res.status}${res.statusText ? ` (${res.statusText})` : ''}`;
+          }
+        }
+        throw new Error(`Sync failed: ${errMsg}`);
+      }
+
+      const data = await res.json();
+      if (Array.isArray(data.items)) {
+        latestMergedList = data.items;
+      }
+      if (data.lastSyncedAt) {
+        lastSyncedTimestamp = data.lastSyncedAt;
+      }
+    }
+
+    setLastSyncedAt(lastSyncedTimestamp);
+    await saveLibraryToDB(latestMergedList);
 
     return {
       success: true,
-      items: mergedList,
-      addedCount: Math.max(0, mergedList.length - localItems.length),
-      lastSyncedAt: now,
+      items: latestMergedList,
+      addedCount: Math.max(0, latestMergedList.length - localItems.length),
+      lastSyncedAt: lastSyncedTimestamp,
       source: 'cloud_server',
     };
   } catch (error: any) {
-    console.error('Cloud synchronization error:', error);
+    console.warn('Cloud synchronization notice:', error?.message || error);
     return {
       success: false,
       items: localItems,
       addedCount: 0,
       lastSyncedAt: getLastSyncedAt() || new Date().toISOString(),
       source: 'cloud_server',
-      error: error.message || 'Network error during cloud synchronization',
+      error: error?.message || 'Network notice during cloud synchronization',
     };
   }
 }
@@ -200,7 +329,7 @@ export async function pullCloudLibrary(syncKey: string): Promise<GeneratedAudioI
       return data.items || [];
     }
   } catch (e) {
-    console.error('Failed to pull cloud library from server:', e);
+    console.warn('Notice: Could not pull cloud library from server:', e);
   }
   return [];
 }

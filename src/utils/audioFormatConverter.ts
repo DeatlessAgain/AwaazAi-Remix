@@ -1,8 +1,8 @@
 import { decodeBase64ToAudioBuffer } from './audioMixer';
 // @ts-ignore
-import * as lamejsModule from 'lamejs';
+import * as lamejsModule from '@breezystack/lamejs';
 
-// Handle both ESM default and CommonJS module shapes for lamejs
+// Handle both ESM default and CommonJS module shapes for @breezystack/lamejs
 const lamejs = (lamejsModule as any).default || lamejsModule;
 
 export type AudioOutputFormat = 'wav' | 'mp3' | 'ogg' | 'aac';
@@ -81,7 +81,12 @@ export async function encodeAudioBufferToMp3(
   const channels = audioBuffer.numberOfChannels;
   const sampleRate = audioBuffer.sampleRate;
 
-  const Mp3Encoder = lamejs.Mp3Encoder || (window as any).lamejs?.Mp3Encoder;
+  const Mp3Encoder =
+    lamejs.Mp3Encoder ||
+    (lamejs as any).default?.Mp3Encoder ||
+    (lamejsModule as any).Mp3Encoder ||
+    (lamejsModule as any).default?.Mp3Encoder ||
+    (window as any).lamejs?.Mp3Encoder;
   if (!Mp3Encoder) {
     throw new Error('MP3 Encoder library not available.');
   }

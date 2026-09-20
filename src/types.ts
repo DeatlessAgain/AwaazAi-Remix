@@ -4,6 +4,7 @@ export type UILanguage = 'english' | 'urdu' | 'hindi';
 export type StudioTab =
   | 'single'
   | 'voice_director'
+  | 'suno_udio'
   | 'naat_singing'
   | 'poetry'
   | 'subtitles'
@@ -352,17 +353,33 @@ export interface PoetryCouplet {
   pauseAfterMs?: number;
 }
 
+export type TarannumLahanArchetype =
+  | 'hazeen_soz'
+  | 'razmiya_inqilabi'
+  | 'shasta_mushaira'
+  | 'classical_ghazal';
+
+export interface PoeticWordGlossaryItem {
+  word: string;
+  meaning: string;
+  contextNote?: string;
+}
+
 export interface PoetryAnalysisResult {
   poetDetected?: string;
   bahrName?: string;
   bahrPattern?: string;
   mood: string;
+  archetypeLahan?: TarannumLahanArchetype;
   recommendedVoice: string;
   recommendedStyle: SpeechStyle;
   recommendedEmotion: VoiceEmotion;
   recommendedBgmTrackId: string;
   couplets: PoetryCouplet[];
   tarannumAdvice: string;
+  poeticMeaning?: string;
+  wordGlossary?: PoeticWordGlossaryItem[];
+  caesuraRules?: string[];
 }
 
 // AI Document & Long Form Narrator
@@ -461,6 +478,145 @@ export interface NaatSingingAnalysisResult {
     cadenceNotes: string;
     pauseAfterMs: number;
   }>;
+  maqamDetails?: {
+    name: string;
+    arabicName?: string;
+    spiritualSignificance: string;
+    melodicFlavor: string;
+  };
+  chorusRecommendation?: {
+    enabled: boolean;
+    style: 'hum_nawa' | 'qawwali_ensemble' | 'solo_pure';
+    adviceUrdu: string;
+  };
+  tajweedPointers?: string[];
+}
+
+export type MusicEngineTarget = 'suno' | 'udio' | 'both';
+
+export interface SunoUdioEnginePrompt {
+  stylePrompt: string;
+  negativePrompt?: string;
+  lyrics: string;
+  tags: string[];
+  tips?: string;
+}
+
+export interface InstrumentalStemItem {
+  name: string;
+  description: string;
+  recommendedEffects?: string;
+}
+
+export interface SunoUdioArrangementSection {
+  section: string;
+  timing?: string;
+  instruments?: string;
+  dynamicFeel?: string;
+  energyLevel?: 'Low' | 'Medium' | 'High' | 'Peak' | string;
+  description?: string;
+}
+
+export interface SunoUdioSocialBundle {
+  suggestedTitle: string;
+  youtubeDescription?: string;
+  description?: string;
+  hashtags: string[];
+}
+
+export interface SunoUdioCompositionResult {
+  songTitle: string;
+  nativeTitle?: string;
+  genre: string;
+  mood: string;
+  tempoBpm: number;
+  timeSignature?: string;
+  musicalKey: string;
+  vocalStyle: string;
+  instrumentalStems?: Array<string | InstrumentalStemItem>;
+  arrangementBreakdown?: SunoUdioArrangementSection[];
+  suno: SunoUdioEnginePrompt;
+  udio: SunoUdioEnginePrompt;
+  singingSnippet: string;
+  recommendedVoice: string;
+  recommendedBgmTrackId: string;
+  productionAdvice: string;
+  socialBundle?: SunoUdioSocialBundle;
+}
+
+export interface PoeticGenerationResult {
+  title: string;
+  poetStyle: string;
+  bahr: string;
+  radif?: string;
+  qafiya?: string;
+  verses: string;
+  meaningSummary: string;
+}
+
+export interface CoupletCritique {
+  original: string;
+  diagnosis: string;
+  issueType: 'meter_fault' | 'weak_word' | 'qafiya_defect' | 'flawless';
+  suggestedAlternative: string;
+  explanation: string;
+}
+
+export interface PoeticIslaahResult {
+  overallFeedback: string;
+  meterStatus: 'perfect' | 'minor_issues' | 'needs_work';
+  bahrName: string;
+  coupletCritiques: CoupletCritique[];
+  generalTips?: string[];
+}
+
+export interface PoeticTashreehResult {
+  urduTashreeh: string;
+  englishPoeticTranslation: string;
+  romanUrdu: string;
+  emotionalCore: string;
+  difficultWords: Array<{ word: string; meaning: string; pronunciation: string }>;
+}
+
+export interface NaatGenerationResult {
+  title: string;
+  genre: string;
+  verses: string;
+  maqamSuggested: string;
+  spiritualSummary: string;
+}
+
+export interface VocalPerformanceGuideResult {
+  alaapOpening: string;
+  pitchTransitions: string;
+  breathMarkers: string;
+  highPitchNotes: string;
+  audienceEngagementTip: string;
+  tajweedChecklist: string[];
+}
+
+export interface SunoHookResult {
+  generatedSection: string;
+  sectionType: string;
+  catchyHookTag: string;
+  structuralTags: string[];
+}
+
+export interface SunoRemixVariation {
+  id: string;
+  title: string;
+  styleName: string;
+  sunoPrompt: string;
+  udioPrompt: string;
+  tempo: string;
+  recommendedInstruments: string[];
+}
+
+export interface SunoEnhancedPromptResult {
+  enhancedPrompt: string;
+  styleTags: string[];
+  negativeTags: string[];
+  productionTip: string;
 }
 
 

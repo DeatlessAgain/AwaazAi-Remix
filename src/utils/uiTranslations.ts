@@ -9,6 +9,7 @@ export interface UITranslationStrings {
     tabs: {
       single: string;
       voice_director: string;
+      suno_udio: string;
       poetry: string;
       naat_singing: string;
       narrator: string;
@@ -43,6 +44,8 @@ export interface UITranslationStrings {
     voiceChangerDesc: string;
     directorTitle: string;
     directorDesc: string;
+    sunoUdioTitle: string;
+    sunoUdioDesc: string;
   };
   common: {
     voiceStudio: string;
@@ -64,6 +67,7 @@ export const UI_TRANSLATIONS: Record<UILanguage, UITranslationStrings> = {
       tabs: {
         single: 'Voice Studio',
         voice_director: 'Voice Director',
+        suno_udio: 'Suno & Udio Music',
         poetry: 'Poetry & Tarannum',
         naat_singing: 'Naat & Singing',
         narrator: 'Book Narrator',
@@ -108,6 +112,9 @@ export const UI_TRANSLATIONS: Record<UILanguage, UITranslationStrings> = {
       directorTitle: 'AI Voice Director & Drama Studio',
       directorDesc:
         'Multi-character conversational drama, dialogue script direction, and emotional storytelling with paired voices.',
+      sunoUdioTitle: 'Suno AI & Udio Music & Song Studio',
+      sunoUdioDesc:
+        'Craft hit song lyrics, arrangement tags, and style prompts optimized specifically for Suno AI & Udio with instant preview.',
     },
     common: {
       voiceStudio: 'Voice Studio',
@@ -127,6 +134,7 @@ export const UI_TRANSLATIONS: Record<UILanguage, UITranslationStrings> = {
       tabs: {
         single: 'وائس اسٹوڈیو',
         voice_director: 'وائس ڈائریکٹر',
+        suno_udio: 'سونو و اوڈیو میوزک',
         poetry: 'شاعری و ترنم',
         naat_singing: 'نعت و گانا اسٹوڈیو',
         narrator: 'کتاب راوی',
@@ -171,6 +179,9 @@ export const UI_TRANSLATIONS: Record<UILanguage, UITranslationStrings> = {
       directorTitle: 'اے آئی وائس ڈائریکٹر و مکالمہ اسٹوڈیو',
       directorDesc:
         'مکالماتی ڈرامہ اور کثیر کرداروں کی کہانی کے لیے AI آوازیں خودکار انداز میں ترتیب دیں۔',
+      sunoUdioTitle: 'سونو اے آئی و اوڈیو میوزک و نغمہ اسٹوڈیو',
+      sunoUdioDesc:
+        'سونو اے آئی اور اوڈیو کے لیے مخصوص اردو اور ہندی گیتوں کے بول، اسٹائل ٹیگز اور کمپوزیشن تیار کریں۔',
     },
     common: {
       voiceStudio: 'وائس اسٹوڈیو',
@@ -190,6 +201,7 @@ export const UI_TRANSLATIONS: Record<UILanguage, UITranslationStrings> = {
       tabs: {
         single: 'वॉयस स्टूडियो',
         voice_director: 'वॉयस डायरेक्टर',
+        suno_udio: 'सुनो व उडियो म्यूज़िक',
         poetry: 'शायरी व तरन्नुम',
         naat_singing: 'नात व गायन',
         narrator: 'बुक नैरेटर',
@@ -234,6 +246,9 @@ export const UI_TRANSLATIONS: Record<UILanguage, UITranslationStrings> = {
       directorTitle: 'एआई वॉयस डायरेक्टर व ड्रामा स्टूडियो',
       directorDesc:
         'मल्टी-कैरेक्टर वार्तालाप नाटक और भावनात्मक कहानियों के लिए संवाद निर्देशन।',
+      sunoUdioTitle: 'सुनो एआई व उडियो म्यूज़िक स्टूडियो',
+      sunoUdioDesc:
+        'सुनो और उडियो के लिए विशेष गीत के बोल, संगीत शैली प्रॉम्प्ट और संरचना तत्काल तैयार करें।',
     },
     common: {
       voiceStudio: 'वॉयस स्टूडियो',

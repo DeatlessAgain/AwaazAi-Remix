@@ -459,8 +459,11 @@ def main():
                 compression = zipfile.ZIP_STORED if rel == "resources.arsc" else zipfile.ZIP_DEFLATED
                 zout.write(filepath, rel, compress_type=compression)
                 
-        # Copy to APK_DOWNLOAD
+        # Copy to APK_DOWNLOAD and .build-outputs
+        os.makedirs('APK_DOWNLOAD', exist_ok=True)
+        os.makedirs('.build-outputs', exist_ok=True)
         subprocess.run(['cp', '-f', out_apk, 'APK_DOWNLOAD/app-debug.apk'], check=True)
+        subprocess.run(['cp', '-f', out_apk, '.build-outputs/app-debug.apk'], check=True)
         size_bytes = os.path.getsize(out_apk)
         print(f"Updated and signed APK successfully: {size_bytes} bytes ({size_bytes / 1048576:.2f} MB)")
 

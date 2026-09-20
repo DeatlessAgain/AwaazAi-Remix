@@ -11,16 +11,21 @@ import {
   RefreshCw,
   Send,
   Layers,
+  Clock,
+  Mic2,
+  HelpCircle,
 } from 'lucide-react';
 import {
   GeneratedAudioItem,
   PoetryAnalysisResult,
   SpeechStyle,
   VoiceEmotion,
+  TarannumLahanArchetype,
 } from '../types';
 import { VOICES } from '../data/voices';
 import { BACKGROUND_MUSIC_TRACKS } from '../data/backgroundMusic';
 import { mixVoiceAndBackgroundMusic } from '../utils/audioMixer';
+import { AIPoetrySuite } from './AIPoetrySuite';
 
 interface AIPoetryStudioProps {
   onGenerated: (item: GeneratedAudioItem) => void;
@@ -36,6 +41,7 @@ const POETRY_PRESETS = [
     recommendedStyle: 'poetic' as SpeechStyle,
     recommendedEmotion: 'dramatic' as VoiceEmotion,
     bgmTrackId: 'sufi_flute',
+    archetype: 'razmiya_inqilabi' as TarannumLahanArchetype,
   },
   {
     poet: 'مرزا اسد اللہ خان غالب (Mirza Ghalib)',
@@ -46,6 +52,7 @@ const POETRY_PRESETS = [
     recommendedStyle: 'poetic' as SpeechStyle,
     recommendedEmotion: 'sad' as VoiceEmotion,
     bgmTrackId: 'poetic_sitar',
+    archetype: 'classical_ghazal' as TarannumLahanArchetype,
   },
   {
     poet: 'فیض احمد فیض (Faiz Ahmad Faiz)',
@@ -56,6 +63,7 @@ const POETRY_PRESETS = [
     recommendedStyle: 'poetic' as SpeechStyle,
     recommendedEmotion: 'emotional_soft' as VoiceEmotion,
     bgmTrackId: 'poetic_sitar',
+    archetype: 'razmiya_inqilabi' as TarannumLahanArchetype,
   },
   {
     poet: 'جون ایلیا (Jaun Elia)',
@@ -66,16 +74,65 @@ const POETRY_PRESETS = [
     recommendedStyle: 'emotional_soft' as SpeechStyle,
     recommendedEmotion: 'sad' as VoiceEmotion,
     bgmTrackId: 'sad_violin',
+    archetype: 'shasta_mushaira' as TarannumLahanArchetype,
   },
   {
-    poet: 'پروین شاکر (Parveen Shakir)',
-    title: 'کو بہ کو پھیل گئی بات شناسائی کی',
+    poet: 'میر تقی میر (Mir Taqi Mir)',
+    title: 'ہستی اپنی حباب کی سی ہے',
     verses:
-      'کو بہ کو پھیل گئی بات شناسائی کی\nاس نے خوشبو کی طرح میری پذیرائی کی\nکیسے کہہ دوں کہ مجھے چھوڑ دیا ہے اس نے\nبات تو سچ ہے مگر بات ہے رسوائی کی',
+      'ہستی اپنی حباب کی سی ہے\nیہ نمائش سراب کی سی ہے\nنازکی اس کے لب کی کیا کہئے\nپنکھڑی اک گلاب کی سی ہے',
     recommendedVoice: 'Aoede',
     recommendedStyle: 'poetic' as SpeechStyle,
     recommendedEmotion: 'emotional_soft' as VoiceEmotion,
     bgmTrackId: 'sufi_flute',
+    archetype: 'hazeen_soz' as TarannumLahanArchetype,
+  },
+];
+
+const TARANNUM_ARCHETYPES: Array<{
+  id: TarannumLahanArchetype;
+  nameUrdu: string;
+  nameEnglish: string;
+  masters: string;
+  description: string;
+  recommendedVoice: string;
+  recommendedBgm: string;
+}> = [
+  {
+    id: 'hazeen_soz',
+    nameUrdu: 'حزنیہ سوز و گداز',
+    nameEnglish: 'Melancholic Soulful Soz',
+    masters: 'میر تقی میر، ناصر کاظمی',
+    description: 'دھیما اور دلگداز ترنم، سکتہ اور طویل سانس کے ساتھ نرم صوتی گداز۔',
+    recommendedVoice: 'Aoede',
+    recommendedBgm: 'sufi_flute',
+  },
+  {
+    id: 'razmiya_inqilabi',
+    nameUrdu: 'رجزیہ و انقلابی گونج',
+    nameEnglish: 'Resonant & Elevating Anthem',
+    masters: 'فیض احمد فیض، حبیب جالب، علامہ اقبال',
+    description: 'بلند آہنگ، باوقار ٹھہراؤ، جوشیلے افاعیل اور ولولہ انگیز ردم۔',
+    recommendedVoice: 'Fenrir',
+    recommendedBgm: 'cinematic_drama',
+  },
+  {
+    id: 'shasta_mushaira',
+    nameUrdu: 'شستہ مشاعرہ لحن',
+    nameEnglish: 'Authentic Mushaira Stage Lahan',
+    masters: 'جون ایلیا، راحت اندوری، وسیم بریلوی',
+    description: 'سامعین کو متوجہ کرنے والا وقفہ، مصرع ثانیہ پر ڈرامائی اٹھان اور مائیک گونج۔',
+    recommendedVoice: 'Charon',
+    recommendedBgm: 'sad_violin',
+  },
+  {
+    id: 'classical_ghazal',
+    nameUrdu: 'کلاسیکی غنائی و راگ دار',
+    nameEnglish: 'Classical Raag & Melody',
+    masters: 'مرزا اسد اللہ غالب، مومن خان مومن',
+    description: 'ستار اور تانپورے کی سنگت، سروں کا اتار چڑھاؤ اور موزوں نغمگی۔',
+    recommendedVoice: 'Kore',
+    recommendedBgm: 'poetic_sitar',
   },
 ];
 
@@ -84,18 +141,35 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(POETRY_PRESETS[0].recommendedVoice);
   const [selectedBgmId, setSelectedBgmId] = useState<string>(POETRY_PRESETS[0].bgmTrackId);
   const [bgmVolume, setBgmVolume] = useState<number>(18);
+  const [selectedLahan, setSelectedLahan] = useState<TarannumLahanArchetype>('razmiya_inqilabi');
+  const [mushairaEcho, setMushairaEcho] = useState<number>(45);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [analysis, setAnalysis] = useState<PoetryAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Insert prosody / caesura marker into text
+  const handleInsertMarker = (marker: string) => {
+    setPoetryText((prev) => `${prev.trimEnd()} ${marker}\n`);
+  };
 
   // Handle Preset selection
   const handleSelectPreset = (preset: typeof POETRY_PRESETS[0]) => {
     setPoetryText(preset.verses);
     setSelectedVoiceId(preset.recommendedVoice);
     setSelectedBgmId(preset.bgmTrackId);
+    if (preset.archetype) {
+      setSelectedLahan(preset.archetype);
+    }
     setAnalysis(null);
     setError(null);
+  };
+
+  // Handle Tarannum Lahan Selection
+  const handleSelectLahan = (archetype: typeof TARANNUM_ARCHETYPES[0]) => {
+    setSelectedLahan(archetype.id);
+    setSelectedVoiceId(archetype.recommendedVoice);
+    setSelectedBgmId(archetype.recommendedBgm);
   };
 
   // Run AI Bahr & Prosody Meter Analyzer
@@ -124,6 +198,9 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
         if (data.analysis.recommendedBgmTrackId) {
           setSelectedBgmId(data.analysis.recommendedBgmTrackId);
         }
+        if (data.analysis.archetypeLahan) {
+          setSelectedLahan(data.analysis.archetypeLahan);
+        }
       }
     } catch (err: any) {
       console.error('Poetry analysis error:', err);
@@ -148,9 +225,9 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
           voice: selectedVoiceId,
           language: 'urdu',
           style: 'poetic',
-          emotion: analysis?.recommendedEmotion || 'dramatic',
-          emotionIntensity: 70,
-          pitch: 0,
+          emotion: analysis?.recommendedEmotion || (selectedLahan === 'hazeen_soz' ? 'sad' : 'dramatic'),
+          emotionIntensity: 75,
+          pitch: selectedLahan === 'razmiya_inqilabi' ? 1 : 0,
         }),
       });
 
@@ -162,20 +239,24 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
       let finalAudioBase64 = data.audioBase64;
       const rawVoiceBase64 = data.audioBase64;
 
-      // 2. Mix with traditional instrument background music if selected
-      if (selectedBgmId && selectedBgmId !== 'none') {
-        try {
-          const mixRes = await mixVoiceAndBackgroundMusic(rawVoiceBase64, {
+      // 2. Mix with traditional instruments and studio Mushaira Mic Reverb
+      try {
+        const mixRes = await mixVoiceAndBackgroundMusic(
+          rawVoiceBase64,
+          {
             trackId: selectedBgmId,
             volume: bgmVolume,
             autoDucking: true,
-          });
-          if (mixRes && mixRes.mixedBase64) {
-            finalAudioBase64 = mixRes.mixedBase64;
+          },
+          {
+            mushairaEchoLevel: mushairaEcho,
           }
-        } catch (mixErr) {
-          console.warn('BGM mixing error in poetry studio:', mixErr);
+        );
+        if (mixRes && mixRes.mixedBase64) {
+          finalAudioBase64 = mixRes.mixedBase64;
         }
+      } catch (mixErr) {
+        console.warn('BGM/Echo mixing error in poetry studio:', mixErr);
       }
 
       const selectedVoiceObj = VOICES.find((v) => v.id === selectedVoiceId);
@@ -189,7 +270,7 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
         language: 'urdu',
         style: 'poetic',
         emotion: analysis?.recommendedEmotion || 'dramatic',
-        emotionIntensity: 70,
+        emotionIntensity: 75,
         pitch: 0,
         bgMusicTrackId: selectedBgmId,
         bgMusicTrackName: bgmObj?.name,
@@ -225,11 +306,11 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
                   AI Poetry Tarannum & Melodic Recitation (ترنم اور غزل کمپوزر)
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-                  Bahr • Tarannum • Sur
+                  Bahr • Tarannum • Sur • Echo
                 </span>
               </div>
               <p className="text-xs text-white/60 mt-0.5">
-                Urdu Shayari recitation with meter analysis (بحر و وزن), prosodic breathing pauses & Eastern instrument accompaniment (رباب، ستار، بانسری).
+                Urdu Shayari recitation with meter analysis (بحر و وزن), prosodic caesura pauses, classical tarannum archetypes & Mushaira hall echo acoustics.
               </p>
             </div>
           </div>
@@ -297,9 +378,60 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
         </div>
       </div>
 
+      {/* Four Classical Tarannum Archetypes */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-white/70 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Classical Tarannum Archetypes (ترنم کے چار روایتی لحن)</span>
+          </span>
+          <span className="text-[10px] text-white/40 font-mono">Select vocal cadence</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {TARANNUM_ARCHETYPES.map((arch) => {
+            const isSelected = selectedLahan === arch.id;
+            return (
+              <button
+                key={arch.id}
+                type="button"
+                onClick={() => handleSelectLahan(arch)}
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                  isSelected
+                    ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-500/10'
+                    : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/70 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <div className="text-xs font-bold text-white font-urdu">{arch.nameUrdu}</div>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                </div>
+                <div className="text-[10px] text-emerald-400 font-mono font-medium">{arch.nameEnglish}</div>
+                <div className="text-[10px] text-amber-300/80 font-urdu mt-0.5">اساتذہ: {arch.masters}</div>
+                <div className="text-[10px] text-white/50 font-urdu mt-1 line-clamp-2 leading-relaxed">
+                  {arch.description}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* AI Poetic Suite: Verse Generator, Islaah & Scansion, Tashreeh & Translation */}
+      <AIPoetrySuite
+        currentText={poetryText}
+        onApplyPoetryText={(newText, mode) => {
+          if (mode === 'replace') {
+            setPoetryText(newText);
+          } else {
+            setPoetryText((prev) => `${prev.trim()}\n\n${newText.trim()}`);
+          }
+          setAnalysis(null);
+        }}
+      />
+
       {/* Main Studio Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Poetry Editor & Meter Inspection (7 cols) */}
+        {/* Left: Poetry Editor, Caesura Toolbar & Meter Inspection (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           <div className="p-5 rounded-3xl bg-[#0c0d14] border border-white/10 space-y-4">
             <div className="flex items-center justify-between">
@@ -309,6 +441,31 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
               <span className="text-[11px] text-white/40 font-mono">
                 {poetryText.split('\n').filter(Boolean).length} Verses
               </span>
+            </div>
+
+            {/* Caesura & Prosodic Pause Quick Toolbar */}
+            <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider font-mono flex items-center gap-1 mr-1">
+                <Clock className="w-3 h-3" />
+                <span>توقف و سکتہ:</span>
+              </span>
+              {[
+                { label: 'سکتہ (350ms)', code: '[سکتہ: 350ms]' },
+                { label: 'وقفہ (700ms)', code: '[وقفہ: 700ms]' },
+                { label: 'تطویل (~)', code: '[تطویل ~]' },
+                { label: 'کھنچاؤ', code: '[کھنچاؤ]' },
+                { label: 'طویل سانس', code: '[سانس 🫁]' },
+              ].map((pill, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleInsertMarker(pill.code)}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-urdu font-medium bg-emerald-950/60 hover:bg-emerald-800/60 text-emerald-200 border border-emerald-500/30 transition-all cursor-pointer"
+                  title={`Insert ${pill.code} into poetry text`}
+                >
+                  {pill.label}
+                </button>
+              ))}
             </div>
 
             <textarea
@@ -344,6 +501,39 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
                   </p>
                 )}
 
+                {/* Poetic Meaning / Tafseer Card */}
+                {analysis.poeticMeaning && (
+                  <div className="p-3 rounded-xl bg-black/40 border border-emerald-500/20 space-y-1 text-right">
+                    <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider font-mono">
+                      مفہوم و تشریح (Interpretation)
+                    </span>
+                    <p className="text-xs text-white/80 font-urdu leading-relaxed">
+                      {analysis.poeticMeaning}
+                    </p>
+                  </div>
+                )}
+
+                {/* Word Glossary Card */}
+                {analysis.wordGlossary && analysis.wordGlossary.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider font-mono flex items-center justify-between">
+                      <span>فرہنگ و لغت (Vocabulary Glossary)</span>
+                      <span className="text-white/40">{analysis.wordGlossary.length} Words</span>
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {analysis.wordGlossary.map((w, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 rounded-xl bg-white/5 border border-white/10 text-right space-y-0.5"
+                        >
+                          <div className="text-xs font-bold text-amber-200 font-urdu">{w.word}</div>
+                          <div className="text-[11px] text-white/70 font-urdu">{w.meaning}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Couplet timing alignment */}
                 {analysis.couplets.length > 0 && (
                   <div className="space-y-1.5 pt-1">
@@ -368,12 +558,12 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
           </div>
         </div>
 
-        {/* Right: Voice Persona & Eastern Instruments (5 cols) */}
+        {/* Right: Voice Persona, Eastern Instruments & Mushaira Mic Echo (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="p-5 rounded-3xl bg-[#0c0d14] border border-white/10 space-y-4">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Music className="w-4 h-4 text-emerald-400" />
-              <span>Recitation Voice & Eastern Instruments</span>
+              <span>Recitation Voice & Acoustic Ambience</span>
             </h3>
 
             {/* Voice Persona Selection */}
@@ -405,6 +595,30 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
               </div>
             </div>
 
+            {/* Mushaira Mic Echo & Reverb Slider */}
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white/80 flex items-center gap-1.5">
+                  <Mic2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Mushaira Mic Echo (مشاعرہ مائیک گونج)</span>
+                </span>
+                <span className="font-mono text-emerald-300 font-bold">{mushairaEcho}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={mushairaEcho}
+                onChange={(e) => setMushairaEcho(parseInt(e.target.value))}
+                className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+              <div className="flex justify-between text-[10px] text-white/40">
+                <span>Direct Voice (خشک)</span>
+                <span>Grand Stage Reverb (وسیع ہال)</span>
+              </div>
+            </div>
+
             {/* Background Instruments */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-white/70">
@@ -412,11 +626,11 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
               </label>
               <div className="space-y-1.5">
                 {[
-                  { id: 'sufi_flute', name: 'Sufi Flute & Rabab (بانسری و رباب)', color: 'emerald' },
-                  { id: 'poetic_sitar', name: 'Poetic Sitar & Tanpura (ستار و تانپورہ)', color: 'amber' },
-                  { id: 'sad_violin', name: 'Sad Melancholic Violin (غمگین وائلن)', color: 'rose' },
-                  { id: 'cinematic_drama', name: 'Cinematic Strings (ڈرامائی ساز)', color: 'purple' },
-                  { id: 'none', name: 'Acapella (بغیر ساز، صرف ترنم)', color: 'slate' },
+                  { id: 'sufi_flute', name: 'Sufi Flute & Rabab (بانسری و رباب)' },
+                  { id: 'poetic_sitar', name: 'Poetic Sitar & Tanpura (ستار و تانپورہ)' },
+                  { id: 'sad_violin', name: 'Sad Melancholic Violin (غمگین وائلن)' },
+                  { id: 'cinematic_drama', name: 'Cinematic Strings (ڈرامائی ساز)' },
+                  { id: 'none', name: 'Acapella (بغیر ساز، صرف خالص ترنم)' },
                 ].map((bgm) => (
                   <button
                     key={bgm.id}
@@ -459,3 +673,4 @@ export const AIPoetryStudio: React.FC<AIPoetryStudioProps> = ({ onGenerated }) =
     </div>
   );
 };
+

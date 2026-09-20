@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GeneratedAudioItem } from '../types';
 import {
   Download,
@@ -26,6 +26,7 @@ interface AudioLibraryProps {
   activeItemId: string | null;
   onSelectItem: (item: GeneratedAudioItem) => void;
   onDeleteItem: (id: string) => void;
+  onDeleteSelected?: (ids: string[]) => void;
   onClearAll: () => void;
   onOpenCloudSync?: () => void;
 }
@@ -35,16 +36,72 @@ export const AudioLibrary: React.FC<AudioLibraryProps> = ({
   activeItemId,
   onSelectItem,
   onDeleteItem,
+  onDeleteSelected,
   onClearAll,
   onOpenCloudSync,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeFormatMenuId, setActiveFormatMenuId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clean up selection if underlying items change
+  useEffect(() => {
+    const currentItemIds = new Set(items.map((i) => i.id));
+    setSelectedIds((prev) => {
+      let hasOrphans = false;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (currentItemIds.has(id)) {
+          next.add(id);
+        } else {
+          hasOrphans = true;
+        }
+      });
+      return hasOrphans ? next : prev;
+    });
+  }, [items]);
 
   if (items.length === 0) {
     return null;
   }
+
+  const handleToggleSelect = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const allSelected = items.length > 0 && selectedIds.size === items.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < items.length;
+
+  const handleToggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((item) => item.id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    const idsToDelete = Array.from(selectedIds);
+    if (onDeleteSelected) {
+      onDeleteSelected(idsToDelete);
+    } else {
+      idsToDelete.forEach((id) => onDeleteItem(id));
+    }
+    setSelectedIds(new Set());
+  };
 
   const handleCopyText = (item: GeneratedAudioItem) => {
     navigator.clipboard.writeText(item.text);
@@ -76,7 +133,7 @@ export const AudioLibrary: React.FC<AudioLibraryProps> = ({
 
   return (
     <div className="space-y-3 pt-2">
-      <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-2.5">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <Music className="w-4 h-4" />
@@ -91,7 +148,53 @@ export const AudioLibrary: React.FC<AudioLibraryProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-2 sm:gap-2.5">
+          {/* Select All Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleSelectAll}
+            id="library-select-all-btn"
+            className={`text-xs px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer font-medium select-none ${
+              allSelected
+                ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-200 hover:bg-indigo-600/30'
+                : someSelected
+                ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300 hover:bg-indigo-900/40'
+                : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10'
+            }`}
+            title={allSelected ? 'Deselect all clips' : 'Select all clips'}
+          >
+            <div
+              className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-all ${
+                allSelected
+                  ? 'bg-indigo-600 border-indigo-500 text-white'
+                  : someSelected
+                  ? 'bg-indigo-600/60 border-indigo-400 text-white'
+                  : 'border-white/30 bg-transparent'
+              }`}
+            >
+              {allSelected ? (
+                <Check className="w-2.5 h-2.5 stroke-[3]" />
+              ) : someSelected ? (
+                <div className="w-1.5 h-0.5 bg-white rounded-full" />
+              ) : null}
+            </div>
+            <span>{allSelected ? 'Deselect All' : 'Select All'}</span>
+          </button>
+
+          {/* Delete Selected Button in Toolbar */}
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              id="delete-selected-library-btn"
+              className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs text-rose-200 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer font-medium shadow-sm animate-in fade-in"
+              title={`Delete ${selectedIds.size} selected clip${selectedIds.size > 1 ? 's' : ''}`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>Delete Selected ({selectedIds.size})</span>
+            </button>
+          )}
+
           {onOpenCloudSync && (
             <button
               type="button"
@@ -109,7 +212,8 @@ export const AudioLibrary: React.FC<AudioLibraryProps> = ({
             type="button"
             onClick={onClearAll}
             id="clear-all-library-btn"
-            className="text-xs text-white/40 hover:text-rose-400 transition-colors flex items-center gap-1 cursor-pointer"
+            className="text-xs text-white/40 hover:text-rose-400 transition-colors flex items-center gap-1 cursor-pointer py-1 px-1.5"
+            title="Clear all clips"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Clear History</span>
@@ -121,6 +225,7 @@ export const AudioLibrary: React.FC<AudioLibraryProps> = ({
         {items.map((item) => {
           const isActive = activeItemId === item.id;
           const isUrdu = item.language === 'urdu';
+          const isSelected = selectedIds.has(item.id);
 
           return (
             <div
@@ -129,29 +234,58 @@ export const AudioLibrary: React.FC<AudioLibraryProps> = ({
               className={`p-4 rounded-2xl border transition-all flex flex-col justify-between group backdrop-blur-xl ${
                 isActive
                   ? 'bg-white/10 border-indigo-500/60 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-400/40'
+                  : isSelected
+                  ? 'bg-indigo-950/25 border-indigo-500/40 shadow-sm shadow-indigo-500/5 ring-1 ring-indigo-500/20'
                   : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                      {item.voice}
-                    </span>
-                    <span className="text-[10px] uppercase text-white/50 font-medium bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
-                      {item.language}
-                    </span>
-                    <span className="text-[10px] text-white/40 font-mono">
-                      {item.style.replace('_', ' ')}
-                    </span>
-                    {item.emotion && item.emotion !== 'neutral' && (
-                      <span className="text-[9px] capitalize text-rose-300 font-medium bg-rose-500/15 px-1.5 py-0.2 rounded-md border border-rose-500/30">
-                        {item.emotion} ({item.emotionIntensity || 50}%)
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {/* Item Checkbox */}
+                    <label
+                      htmlFor={`select-audio-${item.id}`}
+                      className="flex items-center cursor-pointer select-none group/checkbox shrink-0 p-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                      title={isSelected ? 'Deselect clip' : 'Select clip'}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`select-audio-${item.id}`}
+                        checked={isSelected}
+                        onChange={() => handleToggleSelect(item.id)}
+                        className="sr-only peer"
+                      />
+                      <div
+                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-500/30 ring-1 ring-indigo-400/40'
+                            : 'border-white/25 hover:border-indigo-400 bg-white/5 group-hover/checkbox:border-white/50'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                    </label>
+
+                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                        {item.voice}
                       </span>
-                    )}
+                      <span className="text-[10px] uppercase text-white/50 font-medium bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                        {item.language}
+                      </span>
+                      <span className="text-[10px] text-white/40 font-mono">
+                        {item.style.replace('_', ' ')}
+                      </span>
+                      {item.emotion && item.emotion !== 'neutral' && (
+                        <span className="text-[9px] capitalize text-rose-300 font-medium bg-rose-500/15 px-1.5 py-0.2 rounded-md border border-rose-500/30">
+                          {item.emotion} ({item.emotionIntensity || 50}%)
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1 text-[11px] text-white/40 font-mono">
+                  <div className="flex items-center gap-1 text-[11px] text-white/40 font-mono shrink-0">
                     <Clock className="w-3 h-3" />
                     <span>{formatSeconds(item.durationSeconds)}</span>
                   </div>
@@ -248,11 +382,19 @@ export const AudioLibrary: React.FC<AudioLibraryProps> = ({
                     )}
                   </div>
 
-                  {/* Delete Item */}
+                  {/* Delete Single Item */}
                   <button
                     type="button"
                     id={`delete-library-${item.id}`}
-                    onClick={() => onDeleteItem(item.id)}
+                    onClick={() => {
+                      onDeleteItem(item.id);
+                      setSelectedIds((prev) => {
+                        if (!prev.has(item.id)) return prev;
+                        const next = new Set(prev);
+                        next.delete(item.id);
+                        return next;
+                      });
+                    }}
                     className="p-1.5 text-white/30 hover:text-rose-400 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                     title="Delete clip"
                   >

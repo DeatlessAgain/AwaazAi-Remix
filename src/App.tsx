@@ -17,6 +17,7 @@ import { AINaatSingingStudio } from './components/AINaatSingingStudio';
 import { AIDocumentNarrator } from './components/AIDocumentNarrator';
 import { AIVoiceChanger } from './components/AIVoiceChanger';
 import { AIVoiceDirector } from './components/AIVoiceDirector';
+import { AISunoUdioStudio } from './components/AISunoUdioStudio';
 import { AndroidApkModal } from './components/AndroidApkModal';
 import { CloudSyncModal } from './components/CloudSyncModal';
 import { synchronizeLibrary, isAutoSyncEnabled } from './services/cloudSyncService';
@@ -39,6 +40,7 @@ import {
   getLibraryFromDB,
   saveLibraryToDB,
   deleteItemFromDB,
+  deleteItemsFromDB,
   clearLibraryDB,
 } from './utils/audioHelper';
 import { mixVoiceAndBackgroundMusic } from './utils/audioMixer';
@@ -408,6 +410,17 @@ export default function App() {
     }
   };
 
+  const handleDeleteSelectedLibraryItems = (ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    const updated = library.filter((item) => !idSet.has(item.id));
+    setLibrary(updated);
+    deleteItemsFromDB(ids);
+    if (activeItem && idSet.has(activeItem.id)) {
+      setActiveItem(updated.length > 0 ? updated[0] : null);
+    }
+  };
+
   const handleClearAllLibrary = () => {
     setLibrary([]);
     clearLibraryDB();
@@ -449,6 +462,8 @@ export default function App() {
                     ? t.banner.singleTitle
                     : activeStudioTab === 'voice_director'
                     ? t.banner.directorTitle
+                    : activeStudioTab === 'suno_udio'
+                    ? t.banner.sunoUdioTitle
                     : activeStudioTab === 'poetry'
                     ? t.banner.poetryTitle
                     : activeStudioTab === 'naat_singing'
@@ -471,6 +486,8 @@ export default function App() {
                   ? t.banner.singleDesc
                   : activeStudioTab === 'voice_director'
                   ? t.banner.directorDesc
+                  : activeStudioTab === 'suno_udio'
+                  ? t.banner.sunoUdioDesc
                   : activeStudioTab === 'poetry'
                   ? t.banner.poetryDesc
                   : activeStudioTab === 'naat_singing'
@@ -583,7 +600,36 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
+              />
+            </div>
+          </div>
+        ) : activeStudioTab === 'suno_udio' ? (
+          /* Feature: Suno AI & Udio Song Prompt & Lyric Studio */
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-8 space-y-6">
+              <AISunoUdioStudio onAudioGenerated={handleNewGeneratedAudio} />
+            </div>
+            <div className="lg:col-span-4 space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-white/60 flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-amber-400" />
+                    <span>Studio Monitor</span>
+                  </h2>
+                </div>
+                <AudioPlayer item={activeItem} />
+              </div>
+              <AudioLibrary
+                items={library}
+                activeItemId={activeItem?.id || null}
+                onSelectItem={setActiveItem}
+                onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
+                onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -608,7 +654,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -633,7 +681,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -658,7 +708,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -690,7 +742,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -718,7 +772,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -746,7 +802,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -779,7 +837,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -812,7 +872,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
             </div>
           </div>
@@ -913,7 +975,9 @@ export default function App() {
                 activeItemId={activeItem?.id || null}
                 onSelectItem={setActiveItem}
                 onDeleteItem={handleDeleteLibraryItem}
+                onDeleteSelected={handleDeleteSelectedLibraryItems}
                 onClearAll={handleClearAllLibrary}
+                onOpenCloudSync={() => setIsCloudSyncOpen(true)}
               />
 
               {/* Natural Voice Quality Tips */}

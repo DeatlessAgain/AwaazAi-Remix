@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, Sparkles, Languages, Globe, Music, Radio, Mic, Layers, Wand2, Film, Smartphone, Cloud } from 'lucide-react';
+import { Volume2, Sparkles, Languages, Globe, Music, Radio, Mic, Layers, Wand2, Film, Smartphone, Cloud, Disc3 } from 'lucide-react';
 import { SupportedLanguage, StudioTab, UILanguage } from '../types';
 import { UI_TRANSLATIONS } from '../utils/uiTranslations';
 
@@ -85,6 +85,23 @@ export const Header: React.FC<HeaderProps> = ({
               <span>{t.header.tabs.voice_director}</span>
               <span className="text-[9px] px-1.5 py-0.2 bg-rose-500/30 rounded-full text-rose-200 font-mono">
                 AI
+              </span>
+            </button>
+
+            <button
+              type="button"
+              id="header-tab-suno-udio"
+              onClick={() => onSelectStudioTab('suno_udio')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeStudioTab === 'suno_udio'
+                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-md shadow-orange-500/20 ring-1 ring-amber-400/40'
+                  : 'text-amber-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Disc3 className="w-3.5 h-3.5 text-amber-400 animate-spin-slow" />
+              <span>{t.header.tabs.suno_udio}</span>
+              <span className="text-[9px] px-1.5 py-0.2 bg-gradient-to-r from-amber-500/30 to-rose-500/30 rounded-full text-amber-200 font-mono">
+                Suno/Udio
               </span>
             </button>
 

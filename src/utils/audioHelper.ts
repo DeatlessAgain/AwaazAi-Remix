@@ -4,6 +4,7 @@ import {
   getLibraryFromDB,
   saveLibraryToDB,
   deleteItemFromDB,
+  deleteItemsFromDB,
   clearLibraryDB,
 } from './audioStorage';
 import {
@@ -22,6 +23,7 @@ export {
   getLibraryFromDB,
   saveLibraryToDB,
   deleteItemFromDB,
+  deleteItemsFromDB,
   clearLibraryDB,
   type AudioOutputFormat,
   AUDIO_FORMAT_OPTIONS,
